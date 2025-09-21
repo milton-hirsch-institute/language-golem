@@ -75,3 +75,7 @@ out/
 
 # UV
 .python-version
+
+# Claude Code
+.claude/settings.local.json
+.claude/commands/*.local.md
