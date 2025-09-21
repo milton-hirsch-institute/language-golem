@@ -7,6 +7,10 @@ repository.
 
 Python library using `uv` for project management.
 
+## License
+
+This project is licensed under the Apache License 2.0.
+
 ## Development Commands
 
 - `uv sync` - Install dependencies and sync environment
