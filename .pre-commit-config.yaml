@@ -20,3 +20,26 @@ repos:
         exclude: '^(package-lock\.json)'
         args:
           - --autofix
+
+  - repo: local
+    hooks:
+      - id: format
+        name: format python
+        language: system
+        entry: uv run ruff format
+        types: [python]
+        pass_filenames: false
+
+      - id: check
+        name: check python
+        language: system
+        entry: uv run ruff check --fix
+        types: [python]
+        pass_filenames: false
+
+      - id: tests
+        name: tests
+        language: system
+        entry: uv run pytest
+        types: [python]
+        pass_filenames: false

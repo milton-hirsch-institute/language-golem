@@ -28,9 +28,6 @@ dependencies = [
 language-golem = "langgolem.cli.main:main"
 
 [tool.hatch.build]
-include = [
-    "langgolem",
-]
-exclude = [
-    "tests",
+packages = [
+    "src/langgolem",
 ]
