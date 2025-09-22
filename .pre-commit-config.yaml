@@ -1,3 +1,6 @@
+# Copyright 2025 The Milton Hirsch Institute, B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
@@ -21,8 +24,17 @@ repos:
         args:
           - --autofix
 
+  - repo: https://github.com/slobberchops/conhead
+    rev: v1.0.0
+    hooks:
+
+      - id: conhead
+        name: hashhead
+        files: \.(py|toml|yaml|md)$
+
   - repo: local
     hooks:
+
       - id: format
         name: format python
         language: system

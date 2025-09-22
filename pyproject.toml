@@ -1,8 +1,12 @@
+# Copyright 2025 The Milton Hirsch Institute, B.V.
+# SPDX-License-Identifier: Apache-2.0
+
 [tool.uv.workspace]
 members = ["packages/*"]
 
 [tool.uv]
 dev-dependencies = [
+    "conhead>=1.0,<2.0",
     "pytest>=8.0,<9.0",
     "pytest-asyncio>=0.24,<1.0",
     "ruff>=0.6,<1.0",
@@ -21,6 +25,23 @@ markers = [
 [tool.ruff]
 line-length = 99
 target-version = "py313"
+
+[tool.conhead.header.htmllike]
+extensions = ['md']
+template = """
+<!-- Copyright {{YEARS}} The Milton Hirsch Institute, B.V.
+     SPDX-License-Identifier: Apache-2.0
+-->
+
+"""
+
+[tool.conhead.header.pylike]
+extensions = ['py', 'toml', 'yaml']
+template = """
+# Copyright {{YEARS}} The Milton Hirsch Institute, B.V.
+# SPDX-License-Identifier: Apache-2.0
+
+"""
 
 [tool.ruff.format]
 quote-style = "double"

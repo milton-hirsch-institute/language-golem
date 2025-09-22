@@ -1,3 +1,7 @@
+<!-- Copyright 2025 The Milton Hirsch Institute, B.V.
+     SPDX-License-Identifier: Apache-2.0
+-->
+
 # Language Golem
 
 A command-line language tutor that uses OpenAI's Realtime API for interactive vocal

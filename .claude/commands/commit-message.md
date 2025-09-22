@@ -1,3 +1,7 @@
+<!-- Copyright 2025 The Milton Hirsch Institute, B.V.
+     SPDX-License-Identifier: Apache-2.0
+-->
+
 ---
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git branch:*), Bash(git log:*)
 description: Print a commit message for current change
