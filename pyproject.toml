@@ -7,6 +7,7 @@ members = ["packages/*"]
 [tool.uv]
 dev-dependencies = [
     "conhead>=1.0,<2.0",
+    "pyright>=1.0,<2.0",
     "pytest>=8.0,<9.0",
     "pytest-asyncio>=0.24,<1.0",
     "ruff>=0.6,<1.0",
@@ -42,6 +43,21 @@ template = """
 # SPDX-License-Identifier: Apache-2.0
 
 """
+[tool.pyright]
+pythonVersion = "3.13"
+strictListInference = true
+strictDictionaryInference = true
+strictSetInference = true
+reportPrivateUsage = true
+reportConstantRedefinition = true
+reportIncompatibleMethodOverride = true
+reportIncompatibleVariableOverride = true
+reportInconsistentConstructor = true
+reportOverlappingOverload = true
+reportUnknownLambdaType = true
+reportInvalidTypeVarUse = true
+reportUnnecessaryCast = true
+reportUnsupportedDunderAll = true
 
 [tool.ruff.format]
 quote-style = "double"

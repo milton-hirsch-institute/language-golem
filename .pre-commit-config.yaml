@@ -49,6 +49,12 @@ repos:
         types: [python]
         pass_filenames: false
 
+      - id: type-check
+        name: type check
+        language: system
+        entry: poetry run pyright
+        types: [python]
+
       - id: tests
         name: tests
         language: system
