@@ -3,10 +3,17 @@
 
 """Command-line interface for Language Golem."""
 
+import click
+from langgolem.cli import prattle
 
-def main():
-    """Language Golem"""
+
+@click.group
+def langgolem():
+    pass
+
+
+langgolem.add_command(prattle.prattle)
 
 
 if __name__ == "__main__":
-    main()
+    langgolem()
