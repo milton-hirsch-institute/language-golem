@@ -6,39 +6,27 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "language-golem-cli"
+name = "fake-sounddevice"
 version = "0.1.0"
-description = "A command-line language tutor using OpenAI's Realtime API"
+description = "A fake sounddevice package for testing"
 readme = "README.md"
 requires-python = ">=3.13"
 license = "Apache-2.0"
 authors = [
-    { name = "Language Golem Contributors" },
+    { name = "The Milton Hirsch Institute, B.V." },
 ]
 classifiers = [
-    "Environment :: Console",
-    "Intended Audience :: Education",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
-    "Topic :: Education",
+    "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-    "click>=8.0,<9.0",
-    "numpy>=2.0,<3.0",
-    "openai>=1.0,<2.0",
     "sounddevice>=0.5.2,<1.0",
-]
-
-[project.scripts]
-language-golem = "langgolem.cli.main:main"
-
-[tool.uv]
-dev-dependencies = [
-    "fake-sounddevice",
 ]
 
 [tool.hatch.build]
 packages = [
-    "src/langgolem",
+    "src/fakesd",
 ]

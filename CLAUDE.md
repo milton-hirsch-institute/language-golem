@@ -38,6 +38,9 @@ This project is licensed under the Apache License 2.0.
 The project follows standard Python package layout with `uv` as the build system. Dependencies
 and project metadata are managed in `pyproject.toml`.
 
+- Do not create `__init__.py` files in Python packages unless they are being used to as a way
+to compose a single module interface from multiple sub-modules.
+
 ## Commit Message Style
 
 - Clear, concise subject line (50 characters or less)
