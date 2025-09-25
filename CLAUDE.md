@@ -41,6 +41,14 @@ and project metadata are managed in `pyproject.toml`.
 - Do not create `__init__.py` files in Python packages unless they are being used to as a way
 to compose a single module interface from multiple sub-modules.
 
+## Testing Standards
+
+- Each class and top-level function should have a corresponding test class
+- Methods within a class should have their own test sub-class for organization
+- Define test methods as static methods on test classes
+- Simple functions with single test cases may use standalone test functions
+- Follow pytest conventions for test discovery and execution
+
 ## Commit Message Style
 
 - Clear, concise subject line (50 characters or less)
