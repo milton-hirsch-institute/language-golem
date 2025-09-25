@@ -44,9 +44,10 @@ to compose a single module interface from multiple sub-modules.
 ## Testing Standards
 
 - Each class and top-level function should have a corresponding test class
-- Methods within a class should have their own test sub-class for organization
+- Methods and fixtures within a class should have their own test sub-class for organization
 - Define test methods as static methods on test classes
 - Simple functions with single test cases may use standalone test functions
+- Modules with single class or function may be covered by top-level test functions
 - Follow pytest conventions for test discovery and execution
 
 ## Commit Message Style
