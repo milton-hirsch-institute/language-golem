@@ -163,7 +163,7 @@ class DeviceManager:
             case "output":
                 return self.lookup_device(self.__default_output_device)
 
-            case _:  # pragma: no-cover
+            case _:  # pragma: no cover
                 raise AssertionError(f"Unknown device kind: {repr(kind)}")
 
     @classmethod

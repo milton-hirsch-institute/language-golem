@@ -39,49 +39,69 @@ class TestDeviceManager:
             "default_output_device": -1,
         }
 
-    @staticmethod
-    def test_add_device(device_manager):
-        hostapi = device_manager.add_hostapi("host 1")
+    class TestAddDevice:
+        @staticmethod
+        @pytest.fixture
+        def device_manager() -> DeviceManager:
+            return DeviceManager()
 
-        assert device_manager.add_device("device 1", hostapi, max_input_channels=2) == 0
-        assert device_manager.add_device("device 2", hostapi, max_output_channels=2) == 1
+        @staticmethod
+        def test_success(device_manager):
+            hostapi = device_manager.add_hostapi("host 1")
 
-        assert device_manager.device_count == 2
+            assert device_manager.add_device("device 1", hostapi, max_input_channels=2) == 0
+            assert device_manager.add_device("device 2", hostapi, max_output_channels=2) == 1
 
-        device1 = device_manager.lookup_device(0)
-        assert device1["name"] == "device 1"
-        assert device1["index"] == 0
-        assert device1["hostapi"] == hostapi
-        assert device1["max_input_channels"] == 2
-        assert device1["max_output_channels"] == 0
-        assert device1["default_low_input_latency"] == 0.05
-        assert device1["default_low_output_latency"] == 0.01
-        assert device1["default_high_input_latency"] == 0.06
-        assert device1["default_high_output_latency"] == 0.02
-        assert device1["default_samplerate"] == 48000.0
+            assert device_manager.device_count == 2
 
-        device2 = device_manager.lookup_device(1)
-        assert device2["name"] == "device 2"
-        assert device2["index"] == 1
-        assert device2["hostapi"] == hostapi
-        assert device2["max_input_channels"] == 0
-        assert device2["max_output_channels"] == 2
-        assert device2["default_low_input_latency"] == 0.05
-        assert device2["default_low_output_latency"] == 0.01
-        assert device2["default_high_input_latency"] == 0.06
-        assert device2["default_high_output_latency"] == 0.02
-        assert device2["default_samplerate"] == 48000.0
+            device1 = device_manager.lookup_device(0)
+            assert device1["name"] == "device 1"
+            assert device1["index"] == 0
+            assert device1["hostapi"] == hostapi
+            assert device1["max_input_channels"] == 2
+            assert device1["max_output_channels"] == 0
+            assert device1["default_low_input_latency"] == 0.05
+            assert device1["default_low_output_latency"] == 0.01
+            assert device1["default_high_input_latency"] == 0.06
+            assert device1["default_high_output_latency"] == 0.02
+            assert device1["default_samplerate"] == 48000.0
 
-        assert device_manager.default_input_device == 0
-        assert device_manager.default_output_device == 1
+            device2 = device_manager.lookup_device(1)
+            assert device2["name"] == "device 2"
+            assert device2["index"] == 1
+            assert device2["hostapi"] == hostapi
+            assert device2["max_input_channels"] == 0
+            assert device2["max_output_channels"] == 2
+            assert device2["default_low_input_latency"] == 0.05
+            assert device2["default_low_output_latency"] == 0.01
+            assert device2["default_high_input_latency"] == 0.06
+            assert device2["default_high_output_latency"] == 0.02
+            assert device2["default_samplerate"] == 48000.0
 
-        hostapi_instance = device_manager.lookup_hostapi(hostapi)
-        assert hostapi_instance == {
-            "name": "host 1",
-            "devices": [0, 1],
-            "default_input_device": 0,
-            "default_output_device": 1,
-        }
+            assert device_manager.default_input_device == 0
+            assert device_manager.default_output_device == 1
+
+            hostapi_instance = device_manager.lookup_hostapi(hostapi)
+            assert hostapi_instance == {
+                "name": "host 1",
+                "devices": [0, 1],
+                "default_input_device": 0,
+                "default_output_device": 1,
+            }
+
+        @staticmethod
+        def test_invalid_hostapi(device_manager):
+            with pytest.raises(ValueError, match="hostapi is not defined"):
+                device_manager.add_device("device", 5, max_input_channels=2)
+
+        @staticmethod
+        def test_both_zero_channels(device_manager):
+            hostapi = device_manager.add_hostapi("host 1")
+
+            with pytest.raises(
+                ValueError, match="max_input_channels and max_output_channels cannot both be zero"
+            ):
+                device_manager.add_device("device", hostapi)
 
 
 class TestLookupHostapi:
