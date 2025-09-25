@@ -76,8 +76,12 @@ class TestDeviceManager:
         assert device_manager.default_output_device == 1
 
         hostapi_instance = device_manager.lookup_hostapi(hostapi)
-        assert hostapi_instance["default_input_device"] == 0
-        assert hostapi_instance["default_output_device"] == 1
+        assert hostapi_instance == {
+            "name": "host 1",
+            "devices": [0, 1],
+            "default_input_device": 0,
+            "default_output_device": 1,
+        }
 
 
 class TestLookupHostapi:
@@ -191,6 +195,40 @@ class TestLookupDevice:
         # Modifying one shouldn't affect the other
         result1["name"] = "modified"
         assert result2["name"] == "device 1"
+
+
+class TestNewBasic:
+    @staticmethod
+    def test_numerous_devices():
+        manager = DeviceManager.new_basic(device_count=6)
+
+        assert manager.device_count == 6
+        assert manager.hostapi_count == 1
+
+        # Check hostapi
+        hostapi = manager.lookup_hostapi(0)
+        assert hostapi == {
+            "name": "Test hostapi",
+            "devices": [0, 1, 2, 3, 4, 5],
+            "default_input_device": 0,
+            "default_output_device": 1,
+        }
+
+        # Check devices
+        expected_devices = [
+            {"name": "Input device 0", "max_input_channels": 1, "max_output_channels": 0},
+            {"name": "Output device 1", "max_input_channels": 0, "max_output_channels": 1},
+            {"name": "Input/Output device 2", "max_input_channels": 1, "max_output_channels": 1},
+            {"name": "Input device 3", "max_input_channels": 2, "max_output_channels": 0},
+            {"name": "Output device 4", "max_input_channels": 0, "max_output_channels": 2},
+            {"name": "Input/Output device 5", "max_input_channels": 2, "max_output_channels": 2},
+        ]
+
+        for i, expected in enumerate(expected_devices):
+            device = manager.lookup_device(i)
+            assert device["name"] == expected["name"]
+            assert device["max_input_channels"] == expected["max_input_channels"]
+            assert device["max_output_channels"] == expected["max_output_channels"]
 
 
 class TestQueryDevices:

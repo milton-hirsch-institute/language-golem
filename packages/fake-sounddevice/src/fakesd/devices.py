@@ -106,6 +106,8 @@ class DeviceManager:
             if self.__default_output_device < 0:
                 self.__default_output_device = device["index"]
 
+        hostapi_instance["devices"].append(device["index"])
+
         return len(self.__devices) - 1
 
     def __get_hostapi(self, hostapi) -> HostApi:
@@ -154,7 +156,6 @@ class DeviceManager:
         if device is not None:
             return self.lookup_device(device)
 
-        assert kind is not None
         match kind:
             case "input":
                 return self.lookup_device(self.__default_input_device)
@@ -162,5 +163,33 @@ class DeviceManager:
             case "output":
                 return self.lookup_device(self.__default_output_device)
 
-            case _ as unreachable:
-                typing.assert_never(unreachable)
+            case _:  # pragma: no-cover
+                raise AssertionError(f"Unknown device kind: {repr(kind)}")
+
+    @classmethod
+    def new_basic(cls, *, device_count: int = 4) -> typing.Self:
+        manager = cls()
+        hostapi = manager.add_hostapi("Test hostapi")
+
+        for i in range(device_count):
+            device_count = int(i / 3) + 1
+            input_devices = 0
+            output_devices = 0
+            match i % 3:
+                case 0:
+                    name = f"Input device {i}"
+                    input_devices = device_count
+                case 1:
+                    name = f"Output device {i}"
+                    output_devices = device_count
+                case 2:
+                    name = f"Input/Output device {i}"
+                    input_devices = device_count
+                    output_devices = device_count
+                case _ as device_config:  # pragma: no cover
+                    raise AssertionError(f"Unknown device config: {device_config!r}")
+
+            manager.add_device(
+                name, hostapi, max_input_channels=input_devices, max_output_channels=output_devices
+            )
+        return manager

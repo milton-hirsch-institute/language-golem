@@ -15,5 +15,5 @@ def langgolem():
 langgolem.add_command(prattle.prattle)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     langgolem()
