@@ -3,6 +3,8 @@
 
 import copy
 import typing
+from collections.abc import Callable
+from typing import Any
 
 import sounddevice as sd
 
@@ -197,6 +199,8 @@ class DeviceManager:
 
 FAKE_PTR = object()
 
+type AudioInputCallback = Callable[[Any, int, Any, sd.CallbackFlags], None]
+
 
 class FakeInputStream(sd.InputStream):
     @property
@@ -234,7 +238,7 @@ class FakeInputStream(sd.InputStream):
         dtype: str | None = None,
         latency: float | None = None,
         extra_settings=None,
-        callback=None,
+        callback: AudioInputCallback | None = None,
         finished_callback=None,
         clip_off=None,
         dither_off=None,

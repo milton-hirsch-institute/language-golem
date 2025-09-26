@@ -7,7 +7,7 @@ from typing import Any
 
 import sounddevice
 
-AUDIO_SAMPLE_RATE = 24000
+AUDIO_SAMPLE_RATE = 24000.0
 
 type AudioInputCallback = Callable[[Any, int, Any, sounddevice.CallbackFlags], None]
 
