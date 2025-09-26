@@ -13,9 +13,9 @@ from fakesd import monkeypatch
 @contextlib.contextmanager
 def setup(
     device_manager: devices.DeviceManager | None = None,
-) -> Iterator[monkeypatch.Patcher]:
+) -> Iterator[devices.DeviceManager]:
     if device_manager is None:
         device_manager = devices.DeviceManager.new_basic()
     with monkeypatch.Patcher() as patcher:
         patcher.patch(sd, "query_devices", device_manager.query_devices)
-        yield patcher
+        yield device_manager

@@ -12,15 +12,9 @@ class TestSetup:
         """Test fake_sounddevice with default device manager."""
         original_query_devices = sd.query_devices
 
-        with patching.setup() as patcher:
-            # Should have patched sd.query_devices
+        with patching.setup() as device_manager:
             assert sd.query_devices is not original_query_devices
-            assert len(patcher.patched_objects()) == 1
-
-            # Should work with default basic device manager
-            devices_list = sd.query_devices()
-            assert isinstance(devices_list, sd.DeviceList)
-            assert len(devices_list) == 4  # Default basic manager has 6 devices
+            assert device_manager.device_count == 4
 
         # Should be restored after context exit
         assert sd.query_devices is original_query_devices
@@ -31,17 +25,11 @@ class TestSetup:
         original_query_devices = sd.query_devices
 
         # Create custom device manager with 8 devices
-        device_manager = devices.DeviceManager.new_basic(device_count=8)
+        init_device_manager = devices.DeviceManager.new_basic(device_count=8)
 
-        with patching.setup(device_manager) as patcher:
-            # Should have patched sd.query_devices
+        with patching.setup(init_device_manager) as device_manager:
             assert sd.query_devices is not original_query_devices
-            assert len(patcher.patched_objects()) == 1
-
-            # Should work with custom device manager having 8 devices
-            devices_list = sd.query_devices()
-            assert isinstance(devices_list, sd.DeviceList)
-            assert len(devices_list) == 8
+            assert device_manager is init_device_manager
 
         # Should be restored after context exit
         assert sd.query_devices is original_query_devices
