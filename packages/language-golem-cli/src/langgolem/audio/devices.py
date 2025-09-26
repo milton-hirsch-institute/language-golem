@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import dataclasses
+import typing
 from collections.abc import Callable
 from typing import Any
 
@@ -9,7 +10,14 @@ import sounddevice
 
 AUDIO_SAMPLE_RATE = 24000.0
 
-type AudioInputCallback = Callable[[Any, int, Any, sounddevice.CallbackFlags], None]
+
+class Time(typing.Protocol):
+    currentTime: float
+    inputBufferAdcTime: float
+    outputBufferDacTime: float
+
+
+type AudioInputCallback = Callable[[Any, int, Time, sounddevice.CallbackFlags], None]
 
 
 @dataclasses.dataclass(frozen=True)

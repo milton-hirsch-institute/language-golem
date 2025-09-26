@@ -199,7 +199,14 @@ class DeviceManager:
 
 FAKE_PTR = object()
 
-type AudioInputCallback = Callable[[Any, int, Any, sd.CallbackFlags], None]
+
+class Time(typing.Protocol):
+    currentTime: float
+    inputBufferAdcTime: float
+    outputBufferDacTime: float
+
+
+type AudioInputCallback = Callable[[Any, int, Time, sd.CallbackFlags], None]
 
 
 class FakeRawInputStream(sd.RawInputStream):
