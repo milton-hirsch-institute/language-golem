@@ -193,3 +193,90 @@ class DeviceManager:
                 name, hostapi, max_input_channels=input_devices, max_output_channels=output_devices
             )
         return manager
+
+
+FAKE_PTR = object()
+
+
+class FakeInputStream(sd.InputStream):
+    @property
+    def active(self):
+        if self.closed:
+            return False
+        return self.__active
+
+    @property
+    def stopped(self):
+        return not self.active
+
+    @property
+    def closed(self):
+        return self._ptr is None
+
+    @property
+    def time(self):
+        return self.__time
+
+    @property
+    def cpu_load(self):
+        return self.__cpu_load
+
+    @property
+    def read_available(self):
+        raise NotImplementedError()
+
+    def __init__(
+        self,
+        samplerate: float | None = None,
+        blocksize: int | None = None,
+        device: int | None = None,
+        channels: int | None = None,
+        dtype: str | None = None,
+        latency: float | None = None,
+        extra_settings=None,
+        callback=None,
+        finished_callback=None,
+        clip_off=None,
+        dither_off=None,
+        never_drop_input=None,
+        prime_output_buffers_using_stream_callback=None,
+    ):
+        # Store constructor parameters without calling parent constructor
+        # to avoid hardware interaction
+        self._samplerate = samplerate or 44100.0
+        self._blocksize = blocksize or 1024
+        self._device = device or 0
+        self._channels = channels or 1
+        self._dtype = dtype or "float32"
+        self._latency = latency or 0.1
+        self.__extra_settings = extra_settings
+        self._callback = callback
+        self.__finished_callback = finished_callback
+        self.__clip_off = clip_off
+        self.__dither_off = dither_off
+        self.__never_drop_input = never_drop_input
+        self.__prime_output_buffers_using_stream_callback = (
+            prime_output_buffers_using_stream_callback
+        )
+
+        # Initialize fake state
+        self.__active = False
+        self._ptr = FAKE_PTR  # Fake pointer
+        self._samplesize = 4  # 4 bytes for float32
+        self.__time = None
+        self.__cpu_load = 0.1
+
+    def start(self):
+        if self._ptr is not FAKE_PTR:
+            raise sd.PortAudioError("Error starting stream pointer [PaErrorCode -9988]")
+        self.__active = True
+
+    def stop(self, ignore_errors: bool = True):
+        if not ignore_errors:
+            raise NotImplementedError()
+        self.__active = False
+
+    def close(self, ignore_errors: bool = True):
+        if not ignore_errors:
+            raise NotImplementedError()
+        self._ptr = None
