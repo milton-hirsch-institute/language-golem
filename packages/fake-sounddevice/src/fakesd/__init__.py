@@ -4,8 +4,9 @@
 from fakesd import devices
 from fakesd import patching
 
-DeviceManager = devices.DeviceManager
+AudioInputCallback = devices.AudioInputCallback
 Device = devices.Device
+DeviceManager = devices.DeviceManager
 FakeInputStream = devices.FakeInputStream
 FakeRawInputStream = devices.FakeRawInputStream
 HostApi = devices.HostApi
@@ -13,8 +14,9 @@ HostApi = devices.HostApi
 setup = patching.setup
 
 __all__ = [
-    "DeviceManager",
+    "AudioInputCallback",
     "Device",
+    "DeviceManager",
     "FakeInputStream",
     "FakeRawInputStream",
     "HostApi",
