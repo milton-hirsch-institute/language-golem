@@ -1,6 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+# Copyright 2025 The Milton Hirsch Institute, B.V.
+# SPDX-License-Identifier: Apache-2.0
 import dataclasses
 import logging
 from typing import Any
@@ -76,3 +78,9 @@ class Patcher:
 
         if failures:
             raise RuntimeError(f"Failed to restore {len(failures)} patches: {'; '.join(failures)}")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.reset()

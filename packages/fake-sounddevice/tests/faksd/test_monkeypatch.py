@@ -13,6 +13,12 @@ from fakesd.monkeypatch import Patcher
 
 class TestPatcher:
     @staticmethod
+    @pytest.fixture(autouse=True)
+    def all_logs(caplog) -> Iterator[None]:
+        with caplog.at_level(logging.DEBUG):
+            yield
+
+    @staticmethod
     @pytest.fixture
     def patcher() -> Iterator[Patcher]:
         """Create a Patcher instance that is automatically cleaned up after each test."""
@@ -190,3 +196,74 @@ class TestPatcher:
 
             # Verify it returns a sorted list
             assert patched == sorted(patched)
+
+    class TestContextManager:
+        @staticmethod
+        def test_success(patcher, caplog):
+            """Test context manager automatically resets on successful exit."""
+            original_os_name = os.name
+
+            with patcher:
+                patcher.patch(os, "name", "fake_os")
+                assert os.name == "fake_os"
+                assert len(patcher.patched_objects()) == 1
+
+            # After exiting context, patches should be reset
+            assert os.name == original_os_name
+            assert patcher.patched_objects() == []
+
+            # No errors should be logged for successful reset
+            assert caplog.records == []
+
+        @staticmethod
+        def test_internal_exception(caplog):
+            """Test context manager resets patches even when internal exception occurs."""
+            original_os_name = os.name
+
+            with pytest.raises(ValueError, match="test error"):
+                with Patcher() as patcher:
+                    patcher.patch(os, "name", "fake_os")
+                    assert os.name == "fake_os"
+                    raise ValueError("test error")
+
+            # After exception, patches should still be reset
+            assert os.name == original_os_name
+
+            # No errors should be logged for successful reset
+            assert caplog.records == []
+
+        @staticmethod
+        def test_reset_exception(caplog):
+            """Test context manager when reset itself causes an exception."""
+
+            class TestClass:
+                attr = "original"
+
+            original_setattr = setattr
+
+            try:
+                with caplog.at_level(logging.ERROR, logger="fakesd.monkeypatch"):
+                    with pytest.raises(RuntimeError, match="Failed to restore 1 patches"):
+                        with Patcher() as patcher:
+                            patcher.patch(TestClass, "attr", "patched")
+                            assert TestClass.attr == "patched"
+                            # Exception will be raised during __exit__ when reset() is called
+
+                            def failing_setattr(obj, name, value):
+                                if obj is TestClass and name == "attr":
+                                    raise AttributeError("can't set attribute")
+                                original_setattr(obj, name, value)
+
+                            builtins.setattr = failing_setattr
+            finally:
+                builtins.setattr = original_setattr
+
+            # Check that error was logged
+            assert len(caplog.records) == 1
+            logger_name, level, message = caplog.record_tuples[0]
+            assert logger_name == "fakesd.monkeypatch"
+            assert level == logging.ERROR
+            assert (
+                message
+                == f"Failed to restore 'attr' on object {id(TestClass)}: can't set attribute"
+            )
