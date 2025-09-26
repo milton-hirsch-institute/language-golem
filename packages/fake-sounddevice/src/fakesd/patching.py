@@ -5,12 +5,13 @@ import contextlib
 from collections.abc import Iterator
 
 import sounddevice as sd
+
 from fakesd import devices
 from fakesd import monkeypatch
 
 
 @contextlib.contextmanager
-def fake_sounddevice(
+def setup(
     device_manager: devices.DeviceManager | None = None,
 ) -> Iterator[monkeypatch.Patcher]:
     if device_manager is None:

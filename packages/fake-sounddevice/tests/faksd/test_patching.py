@@ -6,13 +6,13 @@ from fakesd import devices
 from fakesd import patching
 
 
-class TestFakeSounddevice:
+class TestSetup:
     @staticmethod
     def test_default_manager():
         """Test fake_sounddevice with default device manager."""
         original_query_devices = sd.query_devices
 
-        with patching.fake_sounddevice() as patcher:
+        with patching.setup() as patcher:
             # Should have patched sd.query_devices
             assert sd.query_devices is not original_query_devices
             assert len(patcher.patched_objects()) == 1
@@ -33,7 +33,7 @@ class TestFakeSounddevice:
         # Create custom device manager with 8 devices
         device_manager = devices.DeviceManager.new_basic(device_count=8)
 
-        with patching.fake_sounddevice(device_manager) as patcher:
+        with patching.setup(device_manager) as patcher:
             # Should have patched sd.query_devices
             assert sd.query_devices is not original_query_devices
             assert len(patcher.patched_objects()) == 1
@@ -54,11 +54,11 @@ class TestFakeSounddevice:
         manager1 = devices.DeviceManager.new_basic(device_count=3)
         manager2 = devices.DeviceManager.new_basic(device_count=5)
 
-        with patching.fake_sounddevice(manager1):
+        with patching.setup(manager1):
             devices_outer = sd.query_devices()
             assert len(devices_outer) == 3
 
-            with patching.fake_sounddevice(manager2):
+            with patching.setup(manager2):
                 devices_inner = sd.query_devices()
                 assert len(devices_inner) == 5
 
