@@ -1,6 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import cast
+
 import pytest
 import sounddevice as sd
 from fakesd import devices
@@ -301,15 +303,15 @@ class TestQueryDevices:
         assert result1 is not result2
 
 
-class TestFakeInputStream:
+class TestFakeRawInputStream:
     @staticmethod
     @pytest.fixture
-    def input_stream() -> devices.FakeInputStream:
-        return devices.FakeInputStream()
+    def raw_input_stream() -> devices.FakeRawInputStream:
+        return devices.FakeRawInputStream()
 
     @staticmethod
     def test_constructor():
-        stream = devices.FakeInputStream()
+        stream = devices.FakeRawInputStream()
 
         assert stream._blocksize == 1024  # pyright: ignore[reportPrivateUsage]
         assert stream._callback is None  # pyright: ignore[reportPrivateUsage]
@@ -338,14 +340,14 @@ class TestFakeInputStream:
         def finished_callback():
             pass
 
-        stream = devices.FakeInputStream(
+        stream = devices.FakeRawInputStream(
             samplerate=48000.0,
             blocksize=512,
             device=1,
             channels=2,
             dtype="int16",
             latency=0.05,
-            callback=callback,
+            callback=cast(devices.AudioInputCallback, callback),
             extra_settings={"test": True},
             finished_callback=finished_callback,
             clip_off=True,
@@ -374,99 +376,111 @@ class TestFakeInputStream:
         assert stream.samplesize == 4
 
     @staticmethod
-    def test_active(input_stream):
-        assert not input_stream.active
-        input_stream.start()
-        assert input_stream.active
-        input_stream.stop()
-        assert not input_stream.active
-        input_stream.start()
-        assert input_stream.active
-        input_stream.close()
-        assert not input_stream.active
+    def test_active(raw_input_stream):
+        assert not raw_input_stream.active
+        raw_input_stream.start()
+        assert raw_input_stream.active
+        raw_input_stream.stop()
+        assert not raw_input_stream.active
+        raw_input_stream.start()
+        assert raw_input_stream.active
+        raw_input_stream.close()
+        assert not raw_input_stream.active
 
     @staticmethod
-    def test_stopped(input_stream):
-        assert input_stream.stopped
-        input_stream.start()
-        assert not input_stream.stopped
-        input_stream.stop()
-        assert input_stream.stopped
-        input_stream.start()
-        assert not input_stream.stopped
-        input_stream.close()
-        assert input_stream.stopped
+    def test_stopped(raw_input_stream):
+        assert raw_input_stream.stopped
+        raw_input_stream.start()
+        assert not raw_input_stream.stopped
+        raw_input_stream.stop()
+        assert raw_input_stream.stopped
+        raw_input_stream.start()
+        assert not raw_input_stream.stopped
+        raw_input_stream.close()
+        assert raw_input_stream.stopped
 
     @staticmethod
-    def test_closed(input_stream):
-        assert not input_stream.closed
-        input_stream.start()
-        assert not input_stream.closed
-        input_stream.stop()
-        assert not input_stream.closed
-        input_stream.start()
-        assert not input_stream.closed
-        input_stream.close()
-        assert input_stream.closed
+    def test_closed(raw_input_stream):
+        assert not raw_input_stream.closed
+        raw_input_stream.start()
+        assert not raw_input_stream.closed
+        raw_input_stream.stop()
+        assert not raw_input_stream.closed
+        raw_input_stream.start()
+        assert not raw_input_stream.closed
+        raw_input_stream.close()
+        assert raw_input_stream.closed
 
     @staticmethod
-    def test_time(input_stream):
-        assert input_stream.time is None
+    def test_time(raw_input_stream):
+        assert raw_input_stream.time is None
 
     @staticmethod
-    def test_cpu_load(input_stream):
-        assert input_stream.cpu_load == 0.1
+    def test_cpu_load(raw_input_stream):
+        assert raw_input_stream.cpu_load == 0.1
 
     @staticmethod
-    def test_read_available(input_stream):
+    def test_read_available(raw_input_stream):
         with pytest.raises(NotImplementedError):
-            _ = input_stream.read_available
+            _ = raw_input_stream.read_available
 
     class TestStart:
         @staticmethod
-        def test_multiple_starts(input_stream):
-            input_stream.start()
-            input_stream.start()
-            assert input_stream.active
+        def test_multiple_starts(raw_input_stream):
+            raw_input_stream.start()
+            raw_input_stream.start()
+            assert raw_input_stream.active
 
         @staticmethod
-        def test_after_stop(input_stream):
-            input_stream.start()
-            input_stream.stop()
-            input_stream.start()
-            assert input_stream.active
+        def test_after_stop(raw_input_stream):
+            raw_input_stream.start()
+            raw_input_stream.stop()
+            raw_input_stream.start()
+            assert raw_input_stream.active
 
         @staticmethod
-        def test_after_close(input_stream):
-            input_stream.start()
-            input_stream.close()
+        def test_after_close(raw_input_stream):
+            raw_input_stream.start()
+            raw_input_stream.close()
             with pytest.raises(
                 sd.PortAudioError, match=r"^Error starting stream pointer \[PaErrorCode -9988]$"
             ):
-                input_stream.start()
-            assert not input_stream.active
+                raw_input_stream.start()
+            assert not raw_input_stream.active
 
     class TestStop:
         @staticmethod
-        def test_multiple_stops(input_stream):
-            input_stream.stop()
-            input_stream.stop()
-            input_stream.start()
-            input_stream.stop()
-            input_stream.stop()
+        def test_multiple_stops(raw_input_stream):
+            raw_input_stream.stop()
+            raw_input_stream.stop()
+            raw_input_stream.start()
+            raw_input_stream.stop()
+            raw_input_stream.stop()
 
         @staticmethod
-        def test_do_not_ignore_errors(input_stream):
+        def test_do_not_ignore_errors(raw_input_stream):
             with pytest.raises(NotImplementedError):
-                input_stream.stop(ignore_errors=False)
+                raw_input_stream.stop(ignore_errors=False)
 
     class TestClose:
         @staticmethod
-        def test_ptr(input_stream):
-            input_stream.close()
-            assert input_stream._ptr is None  # pyright: ignore[reportPrivateUsage]
+        def test_ptr(raw_input_stream):
+            raw_input_stream.close()
+            assert raw_input_stream._ptr is None  # pyright: ignore[reportPrivateUsage]
 
         @staticmethod
-        def test_do_not_ignore_errors(input_stream):
+        def test_do_not_ignore_errors(raw_input_stream):
             with pytest.raises(NotImplementedError):
-                input_stream.close(ignore_errors=False)
+                raw_input_stream.close(ignore_errors=False)
+
+
+class TestFakeInputStream:
+    @staticmethod
+    def test_inheritance():
+        """Test that FakeInputStream inherits from both sd.InputStream and FakeRawInputStream"""
+        stream = devices.FakeInputStream()
+
+        # Test inheritance
+        assert isinstance(stream, sd.InputStream)
+        assert isinstance(stream, devices.FakeRawInputStream)
+        assert isinstance(stream, sd.RawInputStream)

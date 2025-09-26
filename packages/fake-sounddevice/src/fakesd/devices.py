@@ -202,7 +202,7 @@ FAKE_PTR = object()
 type AudioInputCallback = Callable[[Any, int, Any, sd.CallbackFlags], None]
 
 
-class FakeInputStream(sd.InputStream):
+class FakeRawInputStream(sd.RawInputStream):
     @property
     def active(self):
         if self.closed:
@@ -284,3 +284,39 @@ class FakeInputStream(sd.InputStream):
         if not ignore_errors:
             raise NotImplementedError()
         self._ptr = None
+
+
+class FakeInputStream(FakeRawInputStream, sd.InputStream):
+    def __init__(
+        self,
+        samplerate: float | None = None,
+        blocksize: int | None = None,
+        device: int | None = None,
+        channels: int | None = None,
+        dtype: str | None = None,
+        latency: float | None = None,
+        extra_settings=None,
+        callback: AudioInputCallback | None = None,
+        finished_callback=None,
+        clip_off=None,
+        dither_off=None,
+        never_drop_input=None,
+        prime_output_buffers_using_stream_callback=None,
+    ):
+        # Call FakeRawInputStream constructor to initialize fake stream
+        FakeRawInputStream.__init__(
+            self,
+            samplerate=samplerate,
+            blocksize=blocksize,
+            device=device,
+            channels=channels,
+            dtype=dtype,
+            latency=latency,
+            extra_settings=extra_settings,
+            callback=callback,
+            finished_callback=finished_callback,
+            clip_off=clip_off,
+            dither_off=dither_off,
+            never_drop_input=never_drop_input,
+            prime_output_buffers_using_stream_callback=prime_output_buffers_using_stream_callback,
+        )

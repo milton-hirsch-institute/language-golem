@@ -16,6 +16,7 @@ class TestSetup:
             # Check symbols
             assert sd.query_devices == device_manager.query_devices
             assert sd.InputStream is devices.FakeInputStream
+            assert sd.RawInputStream is devices.FakeRawInputStream
 
             # Check device manager
             assert device_manager.device_count == expected_devices
