@@ -30,9 +30,9 @@ def default_input_device() -> AudioDevice:
     return AudioDevice(**sounddevice.query_devices(kind="input"))
 
 
-def default_input_stream(callback: AudioInputCallback) -> sounddevice.InputStream:
+def default_input_stream(callback: AudioInputCallback) -> sounddevice.RawInputStream:
     input_device = default_input_device()
-    return sounddevice.InputStream(
+    return sounddevice.RawInputStream(
         samplerate=AUDIO_SAMPLE_RATE,
         channels=1,
         device=input_device.index,
