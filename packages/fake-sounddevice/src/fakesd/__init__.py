@@ -6,6 +6,7 @@ from fakesd import patching
 
 DeviceManager = devices.DeviceManager
 Device = devices.Device
+FakeInputStream = devices.FakeInputStream
 HostApi = devices.HostApi
 
 setup = patching.setup
@@ -13,6 +14,7 @@ setup = patching.setup
 __all__ = [
     "DeviceManager",
     "Device",
+    "FakeInputStream",
     "HostApi",
     "setup",
 ]

@@ -8,31 +8,33 @@ from fakesd import patching
 
 class TestSetup:
     @staticmethod
-    def test_default_manager():
-        """Test fake_sounddevice with default device manager."""
+    def do_patch_setup_test(init_device_manager: devices.DeviceManager | None, expected_devices):
         original_query_devices = sd.query_devices
+        original_input_stream = sd.InputStream
 
-        with patching.setup() as device_manager:
-            assert sd.query_devices is not original_query_devices
-            assert device_manager.device_count == 4
+        with patching.setup(init_device_manager) as device_manager:
+            # Check symbols
+            assert sd.query_devices == device_manager.query_devices
+            assert sd.InputStream is devices.FakeInputStream
+
+            # Check device manager
+            assert device_manager.device_count == expected_devices
+            if init_device_manager is not None:
+                assert device_manager is init_device_manager
 
         # Should be restored after context exit
         assert sd.query_devices is original_query_devices
+        assert sd.InputStream is original_input_stream
+
+    @staticmethod
+    def test_default_manager():
+        """Test fake_sounddevice with default device manager."""
+        TestSetup.do_patch_setup_test(None, 4)
 
     @staticmethod
     def test_custom_manager():
         """Test fake_sounddevice with custom device manager."""
-        original_query_devices = sd.query_devices
-
-        # Create custom device manager with 8 devices
-        init_device_manager = devices.DeviceManager.new_basic(device_count=8)
-
-        with patching.setup(init_device_manager) as device_manager:
-            assert sd.query_devices is not original_query_devices
-            assert device_manager is init_device_manager
-
-        # Should be restored after context exit
-        assert sd.query_devices is original_query_devices
+        TestSetup.do_patch_setup_test(devices.DeviceManager.new_basic(device_count=8), 8)
 
     @staticmethod
     def test_nested_contexts():
