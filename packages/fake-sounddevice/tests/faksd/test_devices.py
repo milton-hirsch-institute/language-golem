@@ -455,7 +455,12 @@ class TestFakeRawInputStream:
             blocks: list[tuple[bytes, float]] = []
 
             def callback(block: Any, frames: int, time: devices.Time, status: sd.CallbackFlags):
-                assert frames == 4
+                # Handle the end-of-input empty callback
+                if frames == 0:
+                    assert block == b""
+                else:
+                    assert frames == 4
+                    assert len(block) == 8
                 assert time.currentTime == 0
                 assert time.outputBufferDacTime == 0
                 assert isinstance(status, sd.CallbackFlags)
@@ -466,10 +471,15 @@ class TestFakeRawInputStream:
             )
 
             with raw_input_stream:
-                assert len(blocks) == 22050
+                assert len(blocks) == 22051
 
                 for i, (_, timestamp) in enumerate(blocks):
                     assert timestamp == i / 2 / 44100.0
+
+                for block, _ in blocks[:-1]:
+                    assert len(block) == 8
+
+                assert blocks[-1][0] == b""
 
                 all_sound = b"".join([b for b, _ in blocks])
                 assert all_sound == waves.create_sawtooth_wave(0.1, 2.0, 44100.0, 2)

@@ -321,6 +321,11 @@ class FakeRawInputStream(sd.RawInputStream):
                 time_struct = TimeStruct(0, current_time, 0)
                 self._callback(block, self._blocksize, time_struct, sounddevice.CallbackFlags())
 
+            # Add an empty callback for use by some tests to know when end of input occurs
+            current_time = (block_count / float(bytes_per_frame)) / self._samplerate
+            time_struct = TimeStruct(0, current_time, 0)
+            self._callback(b"", 0, time_struct, sounddevice.CallbackFlags())
+
     def stop(self, ignore_errors: bool = True):
         if not ignore_errors:
             raise NotImplementedError()
