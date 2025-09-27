@@ -24,7 +24,11 @@ async def default_input_queuer(queue: asyncio.Queue[RawAudio]):
         buffer: Any, frame_count: int, time: devices.Time, status: sounddevice.CallbackFlags
     ):
         audio = RawAudio(bytes(buffer), frame_count, time.inputBufferAdcTime)
-        loop.call_soon_threadsafe(queue.put_nowait, audio)
+
+        def queue_audio():
+            queue.put_nowait(audio)
+
+        loop.call_soon_threadsafe(queue_audio)
 
     with devices.default_input_stream(callback):
         await asyncio.Future()
