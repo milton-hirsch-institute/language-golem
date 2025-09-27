@@ -32,6 +32,17 @@ This project is licensed under the Apache License 2.0.
 - Code formatting enforced by `ruff format`
 - Linting rules configured in `pyproject.toml`
 - Markdown files should have 99 character column limit (except code blocks when necessary)
+- Do not import symbols into modules. Always prefer to reference the module that the symbol
+  is contained in.
+  ```python
+  # Correct
+  from fakesd import waves
+  result = waves.create_sawtooth_wave(...)
+
+  # Incorrect
+  from fakesd.waves import create_sawtooth_wave
+  result = create_sawtooth_wave(...)
+  ```
 
 ## Project Structure
 

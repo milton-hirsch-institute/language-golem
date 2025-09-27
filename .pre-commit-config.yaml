@@ -14,11 +14,13 @@ repos:
         exclude: '^(package-lock\.json)'
       - id: destroyed-symlinks
       - id: end-of-file-fixer
+        exclude: '^.+(\.pcm)'
       - id: no-commit-to-branch
         args: [
           --branch, main
         ]
       - id: trailing-whitespace
+        exclude: '^.+(\.pcm)'
       - id: pretty-format-json
         exclude: '^(package-lock\.json)'
         args:
