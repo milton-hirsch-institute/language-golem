@@ -1,11 +1,13 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import Any
 from typing import cast
 
 import pytest
 import sounddevice as sd
 from fakesd import devices
+from fakesd import waves
 
 
 class TestDeviceManager:
@@ -313,21 +315,21 @@ class TestFakeRawInputStream:
     def test_constructor():
         stream = devices.FakeRawInputStream()
 
-        assert stream._blocksize == 1024  # pyright: ignore[reportPrivateUsage]
+        assert stream._blocksize == 128  # pyright: ignore[reportPrivateUsage]
         assert stream._callback is None  # pyright: ignore[reportPrivateUsage]
         assert stream._channels == 1  # pyright: ignore[reportPrivateUsage]
         assert stream._device == 0  # pyright: ignore[reportPrivateUsage]
-        assert stream._dtype == "float32"  # pyright: ignore[reportPrivateUsage]
+        assert stream._dtype == "int32"  # pyright: ignore[reportPrivateUsage]
         assert stream._latency == 0.1  # pyright: ignore[reportPrivateUsage]
         assert stream._ptr is devices.FAKE_PTR  # pyright: ignore[reportPrivateUsage]
         assert stream._samplerate == 44100.0  # pyright: ignore[reportPrivateUsage]
         assert stream._samplesize == 4  # pyright: ignore[reportPrivateUsage]
 
         # properties
-        assert stream.blocksize == 1024
+        assert stream.blocksize == 128
         assert stream.channels == 1
         assert stream.device == 0
-        assert stream.dtype == "float32"
+        assert stream.dtype == "int32"
         assert stream.latency == 0.1
         assert stream.samplerate == 44100.0
         assert stream.samplesize == 4
@@ -447,6 +449,30 @@ class TestFakeRawInputStream:
             ):
                 raw_input_stream.start()
             assert not raw_input_stream.active
+
+        @staticmethod
+        def test_with_callback():
+            blocks: list[tuple[bytes, float]] = []
+
+            def callback(block: Any, frames: int, time: devices.Time, status: sd.CallbackFlags):
+                assert frames == 4
+                assert time.currentTime == 0
+                assert time.outputBufferDacTime == 0
+                assert isinstance(status, sd.CallbackFlags)
+                blocks.append((block, time.inputBufferAdcTime))
+
+            raw_input_stream = devices.FakeRawInputStream(
+                blocksize=4, dtype="int16", callback=callback
+            )
+
+            with raw_input_stream:
+                assert len(blocks) == 22050
+
+                for i, (_, timestamp) in enumerate(blocks):
+                    assert timestamp == i / 2 / 44100.0
+
+                all_sound = b"".join([b for b, _ in blocks])
+                assert all_sound == waves.create_sawtooth_wave(0.1, 2.0, 44100.0, 2)
 
     class TestStop:
         @staticmethod

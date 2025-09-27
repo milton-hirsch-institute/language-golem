@@ -2,11 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
+import dataclasses
+import math
 import typing
 from collections.abc import Callable
 from typing import Any
 
+import sounddevice
 import sounddevice as sd
+
+from fakesd import waves
 
 
 class Device(typing.TypedDict):
@@ -199,8 +204,22 @@ class DeviceManager:
 
 FAKE_PTR = object()
 
+DTYPE_TO_BYTE_SIZE = {
+    "int8": 1,
+    "int16": 2,
+    "int24": 3,
+    "int32": 4,
+}
+
 
 class Time(typing.Protocol):
+    currentTime: float
+    inputBufferAdcTime: float
+    outputBufferDacTime: float
+
+
+@dataclasses.dataclass
+class TimeStruct:
     currentTime: float
     inputBufferAdcTime: float
     outputBufferDacTime: float
@@ -252,10 +271,15 @@ class FakeRawInputStream(sd.RawInputStream):
         never_drop_input=None,
         prime_output_buffers_using_stream_callback=None,
     ):
+        if dtype is None:
+            dtype = "int32"
+        if dtype not in DTYPE_TO_BYTE_SIZE:
+            raise NotImplementedError(f"Unsupported dtype: {repr(dtype)}")
+
         # Store constructor parameters without calling parent constructor
         # to avoid hardware interaction
         self._samplerate = samplerate or 44100.0
-        self._blocksize = blocksize or 1024
+        self._blocksize = blocksize or 128
         self._device = device or 0
         self._channels = channels or 1
         self._dtype = dtype or "float32"
@@ -281,6 +305,21 @@ class FakeRawInputStream(sd.RawInputStream):
         if self._ptr is not FAKE_PTR:
             raise sd.PortAudioError("Error starting stream pointer [PaErrorCode -9988]")
         self.__active = True
+
+        if self._callback is not None:
+            # Generate a whole bunch of audio - 2 seconds worth
+            bytes_per_frame = DTYPE_TO_BYTE_SIZE[self._dtype]
+            audio = waves.create_sawtooth_wave(0.1, 2.0, self._samplerate, bytes_per_frame)
+
+            bytes_per_block = bytes_per_frame * self._blocksize
+            block_count = int(math.ceil(len(audio) / bytes_per_block))
+
+            for index in range(block_count):
+                start = index * bytes_per_block
+                block = audio[start : start + bytes_per_block]
+                current_time = (index / float(bytes_per_frame)) / self._samplerate
+                time_struct = TimeStruct(0, current_time, 0)
+                self._callback(block, self._blocksize, time_struct, sounddevice.CallbackFlags())
 
     def stop(self, ignore_errors: bool = True):
         if not ignore_errors:
