@@ -18,11 +18,8 @@ async def test_default_input_queuer():
     task = asyncio.create_task(asyncaudio.default_input_queuer(queue))
     audio_records: list[asyncaudio.RawAudio] = []
 
-    while queue.empty():
-        await asyncio.sleep(0)
-
     try:
-        while not queue.empty():
+        while True:
             next_record = await queue.get()
             if next_record.frames == 0:
                 break
