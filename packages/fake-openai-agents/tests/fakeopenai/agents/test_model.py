@@ -9,15 +9,6 @@ import pytest
 from agents import realtime as rt
 from agents.realtime import model_events
 from fakeopenai.agents import model
-from openai.types.realtime import conversation_item_deleted_event
-from openai.types.realtime import realtime_audio_config as rt_audio_config
-from openai.types.realtime import realtime_audio_config_input as rt_audio_config_input
-from openai.types.realtime import realtime_audio_config_output as rt_audio_config_output
-from openai.types.realtime import realtime_audio_formats as rt_audio_formats
-from openai.types.realtime import (
-    realtime_audio_input_turn_detection as rt_audio_input_turn_detection,
-)
-from openai.types.realtime import session_created_event
 
 
 class FakeRealtimeModelListener(rt.RealtimeModelListener):
@@ -43,31 +34,46 @@ def assert_session_created_event(event: model_events.RealtimeModelEvent):
     assert isinstance(event, model_events.RealtimeModelRawServerEvent)
     assert event.type == "raw_server_event"
 
-    session_event = session_created_event.SessionCreatedEvent(**event.data)
-    assert session_event.type == "session.created"
-    assert session_event.event_id.startswith("event_")
-
-    # Compare against expected session structure
-    session = session_event.session
-    assert session.type == "realtime"
-    assert session.model == "gpt-realtime"
-    assert session.output_modalities == ["audio"]
-    assert session.instructions == "fake-golem-instructions"
-    assert session.tools == []
-    assert session.tool_choice == "auto"
-    assert session.truncation == "auto"
-    assert isinstance(session.audio, rt_audio_config.RealtimeAudioConfig)
-    assert isinstance(session.audio.input, rt_audio_config_input.RealtimeAudioConfigInput)
-    assert isinstance(session.audio.input.format, rt_audio_formats.AudioPCM)
-    assert session.audio.input.format.rate == 24000
-    assert session.audio.input.format.type == "audio/pcm"
-    assert isinstance(session.audio.input.turn_detection, rt_audio_input_turn_detection.ServerVad)
-    assert session.audio.input.turn_detection.type == "server_vad"
-    assert isinstance(session.audio.output, rt_audio_config_output.RealtimeAudioConfigOutput)
-    assert isinstance(session.audio.output.format, rt_audio_formats.AudioPCM)
-    assert session.audio.output.format.rate == 24000
-    assert session.audio.output.format.type == "audio/pcm"
-    assert session.audio.output.voice == "alloy"
+    assert event.data == {
+        "event_id": "event_000001",
+        "session": {
+            "audio": {
+                "input": {
+                    "format": {"rate": 24000, "type": "audio/pcm"},
+                    "noise_reduction": None,
+                    "transcription": None,
+                    "turn_detection": {
+                        "create_response": True,
+                        "idle_timeout_ms": None,
+                        "interrupt_response": True,
+                        "prefix_padding_ms": 300,
+                        "silence_duration_ms": 200,
+                        "threshold": 0.5,
+                        "type": "server_vad",
+                    },
+                },
+                "output": {
+                    "format": {"rate": 24000, "type": "audio/pcm"},
+                    "speed": 1.0,
+                    "voice": "alloy",
+                },
+            },
+            "id": "sess_000001",
+            "include": None,
+            "instructions": "fake-golem-instructions",
+            "max_output_tokens": None,
+            "model": "gpt-realtime",
+            "object": "realtime.session",
+            "output_modalities": ["audio"],
+            "prompt": None,
+            "tool_choice": "auto",
+            "tools": [],
+            "tracing": None,
+            "truncation": "auto",
+            "type": "realtime",
+        },
+        "type": "session.created",
+    }
 
 
 class TestConnect:
@@ -256,34 +262,6 @@ class TestReturnMessage:
 
         assert len(listener.events) == 1  # test_event + session.created
         assert_session_created_event(listener.events[0])
-
-
-class TestReturnServerMessage:
-    @staticmethod
-    async def test_success(fake_model):
-        config = rt.RealtimeModelConfig()
-        listener = FakeRealtimeModelListener()
-
-        fake_model.add_listener(listener)
-        await fake_model.connect(config)
-
-        server_event = conversation_item_deleted_event.ConversationItemDeletedEvent(
-            event_id="test-id", item_id="test-item-id", type="conversation.item.deleted"
-        )
-        fake_model.return_server_message(server_event)
-
-        await asyncio.sleep(0.01)
-
-        assert len(listener.events) == 2  # session.created + test event
-        assert_session_created_event(listener.events[0])
-        received_event = listener.events[1]  # The test event is second
-        assert isinstance(received_event, model_events.RealtimeModelRawServerEvent)
-        assert received_event.type == "raw_server_event"
-
-        parsed_event = conversation_item_deleted_event.ConversationItemDeletedEvent(
-            **received_event.data
-        )
-        assert parsed_event == server_event
 
 
 class TestRunning:

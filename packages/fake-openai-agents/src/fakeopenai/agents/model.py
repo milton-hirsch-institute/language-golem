@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+from typing import Any
 from typing import override
 
 from agents import realtime as rt
@@ -14,7 +15,6 @@ from openai.types.realtime import realtime_audio_formats as rt_audio_formats
 from openai.types.realtime import (
     realtime_audio_input_turn_detection as rt_audio_input_turn_detection,
 )
-from openai.types.realtime import realtime_server_event as rt_server_event
 from openai.types.realtime import realtime_session_create_request as rt_session_create_request
 from openai.types.realtime import session_created_event
 
@@ -79,7 +79,19 @@ class FakeRealtimeModel(rt.RealtimeModel):
         session_message = session_created_event.SessionCreatedEvent(
             type="session.created", event_id=self.__event_ids.next(), session=session
         )
-        self.return_server_message(session_message)
+
+        model_dict = session_message.model_dump()
+        session_dict = model_dict["session"]
+
+        session_id = self.__session_ids.next()
+        session_dict.update(
+            {
+                "id": session_id,
+                "object": "realtime.session",
+            }
+        )
+
+        self.__return_server_message(model_dict)
 
     def add_listener(self, listener: rt.RealtimeModelListener) -> None:
         """Add a listener to the model."""
@@ -110,9 +122,8 @@ class FakeRealtimeModel(rt.RealtimeModel):
             while not self.__return_queue.empty():
                 self.__return_queue.get_nowait()
 
-    def return_server_message(self, message: rt_server_event.RealtimeServerEvent):
-        data = message.model_dump()
-        server_message = model_events.RealtimeModelRawServerEvent(data=data)
+    def __return_server_message(self, message: dict[str, Any]):
+        server_message = model_events.RealtimeModelRawServerEvent(data=message)
         self.return_message(server_message)
 
     def return_message(self, message: model_events.RealtimeModelEvent):
