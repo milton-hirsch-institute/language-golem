@@ -14,17 +14,30 @@ class FakeRealtimeModelListener(rt.RealtimeModelListener):
         raise NotImplementedError()
 
 
-class TestFakeRealtimeModelConnect:
+class TestConnect:
     @staticmethod
-    async def test_not_implemented():
+    async def test_not_connected():
         fake_model = model.FakeRealtimeModel()
         config = rt.RealtimeModelConfig()
 
-        with pytest.raises(NotImplementedError):
+        assert not fake_model.is_connected
+        await fake_model.connect(config)
+        assert fake_model.is_connected
+
+    @staticmethod
+    async def test_connected():
+        fake_model = model.FakeRealtimeModel()
+        config = rt.RealtimeModelConfig()
+
+        await fake_model.connect(config)
+
+        with pytest.raises(AssertionError, match="Already connected"):
             await fake_model.connect(config)
 
+        assert fake_model.is_connected
 
-class TestFakeRealtimeModelAddListener:
+
+class TestAddListener:
     @staticmethod
     def test_not_implemented():
         fake_model = model.FakeRealtimeModel()
@@ -34,7 +47,7 @@ class TestFakeRealtimeModelAddListener:
             fake_model.add_listener(listener)
 
 
-class TestFakeRealtimeModelRemoveListener:
+class TestRemoveListener:
     @staticmethod
     def test_not_implemented():
         fake_model = model.FakeRealtimeModel()
@@ -44,20 +57,43 @@ class TestFakeRealtimeModelRemoveListener:
             fake_model.remove_listener(listener)
 
 
-class TestFakeRealtimeModelSendEvent:
+class TestSendEvent:
+    @staticmethod
+    async def test_not_connected():
+        fake_model = model.FakeRealtimeModel()
+        event = rt.RealtimeModelSendInterrupt()
+
+        with pytest.raises(AssertionError, match="Not connected"):
+            await fake_model.send_event(event)
+
     @staticmethod
     async def test_not_implemented():
         fake_model = model.FakeRealtimeModel()
+        config = rt.RealtimeModelConfig()
         event = rt.RealtimeModelSendInterrupt()
+
+        await fake_model.connect(config)
 
         with pytest.raises(NotImplementedError):
             await fake_model.send_event(event)
 
 
-class TestFakeRealtimeModelClose:
+class TestClose:
     @staticmethod
-    async def test_not_implemented():
+    async def test_success():
         fake_model = model.FakeRealtimeModel()
 
-        with pytest.raises(NotImplementedError):
-            await fake_model.close()
+        await fake_model.close()
+        assert not fake_model.is_connected
+        await fake_model.close()
+        assert not fake_model.is_connected
+
+    @staticmethod
+    async def test_reconnect():
+        fake_model = model.FakeRealtimeModel()
+        config = rt.RealtimeModelConfig()
+
+        await fake_model.connect(config)
+        await fake_model.close()
+        await fake_model.connect(config)
+        assert fake_model.is_connected
