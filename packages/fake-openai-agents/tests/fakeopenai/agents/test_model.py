@@ -155,3 +155,8 @@ class TestRunning:
         assert realtime_session.model == realtime_model
         assert realtime_model.is_connected
         assert realtime_model.listeners == (realtime_session,)
+
+    @staticmethod
+    async def test_send_audio(realtime_session):
+        with pytest.raises(NotImplementedError):
+            await realtime_session.send_audio(b"realtime-audio")
