@@ -8,6 +8,7 @@ import sounddevice as sd
 
 from fakesd import devices
 from fakesd import monkeypatch
+from fakesd import streaming
 
 
 @contextlib.contextmanager
@@ -18,6 +19,6 @@ def setup(
         device_manager = devices.DeviceManager.new_basic()
     with monkeypatch.Patcher() as patcher:
         patcher.patch(sd, "query_devices", device_manager.query_devices)
-        patcher.patch(sd, "InputStream", devices.FakeInputStream)
-        patcher.patch(sd, "RawInputStream", devices.FakeRawInputStream)
+        patcher.patch(sd, "InputStream", streaming.FakeInputStream)
+        patcher.patch(sd, "RawInputStream", streaming.FakeRawInputStream)
         yield device_manager
