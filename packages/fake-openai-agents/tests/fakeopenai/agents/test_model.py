@@ -39,22 +39,50 @@ class TestConnect:
 
 class TestAddListener:
     @staticmethod
-    def test_not_implemented():
+    def test_add_new_listener():
+        fake_model = model.FakeRealtimeModel()
+
+        listener1 = FakeRealtimeModelListener()
+        fake_model.add_listener(listener1)
+        assert fake_model.listeners == (listener1,)
+
+        listener2 = FakeRealtimeModelListener()
+        fake_model.add_listener(listener2)
+        assert fake_model.listeners == (listener1, listener2)
+
+    @staticmethod
+    def test_add_duplicate_listener():
         fake_model = model.FakeRealtimeModel()
         listener = FakeRealtimeModelListener()
 
-        with pytest.raises(NotImplementedError):
-            fake_model.add_listener(listener)
+        fake_model.add_listener(listener)
+        fake_model.add_listener(listener)
+
+        assert fake_model.listeners == (listener,)
 
 
 class TestRemoveListener:
     @staticmethod
-    def test_not_implemented():
+    def test_remove_existing_listener():
+        fake_model = model.FakeRealtimeModel()
+        listener1 = FakeRealtimeModelListener()
+        listener2 = FakeRealtimeModelListener()
+
+        fake_model.add_listener(listener1)
+        fake_model.add_listener(listener2)
+
+        fake_model.remove_listener(listener1)
+
+        assert fake_model.listeners == (listener2,)
+
+    @staticmethod
+    def test_remove_nonexistent_listener():
         fake_model = model.FakeRealtimeModel()
         listener = FakeRealtimeModelListener()
 
-        with pytest.raises(NotImplementedError):
-            fake_model.remove_listener(listener)
+        fake_model.remove_listener(listener)
+
+        assert fake_model.listeners == ()
 
 
 class TestSendEvent:
