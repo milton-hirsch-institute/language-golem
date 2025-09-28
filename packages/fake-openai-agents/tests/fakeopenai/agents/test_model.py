@@ -1,7 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
-import typing
+from collections.abc import AsyncIterator
+from typing import override
 
 import pytest
 from agents import realtime as rt
@@ -9,7 +10,7 @@ from fakeopenai.agents import model
 
 
 class FakeRealtimeModelListener(rt.RealtimeModelListener):
-    @typing.override
+    @override
     async def on_event(self, event: rt.RealtimeModelEvent):
         raise NotImplementedError()
 
@@ -125,3 +126,32 @@ class TestClose:
         await fake_model.close()
         await fake_model.connect(config)
         assert fake_model.is_connected
+
+
+class TestRunning:
+    @staticmethod
+    @pytest.fixture
+    def default_agent() -> rt.RealtimeAgent:
+        return rt.RealtimeAgent(name="Fake Golem", instructions="You are a fake agent")
+
+    @staticmethod
+    @pytest.fixture
+    def realtime_model() -> model.FakeRealtimeModel:
+        return model.FakeRealtimeModel()
+
+    @staticmethod
+    @pytest.fixture
+    def realtime_runner(default_agent, realtime_model) -> rt.RealtimeRunner:
+        return rt.RealtimeRunner(default_agent, model=realtime_model)
+
+    @staticmethod
+    @pytest.fixture
+    async def realtime_session(realtime_runner) -> AsyncIterator[rt.RealtimeSession]:
+        async with await realtime_runner.run() as session:
+            yield session
+
+    @staticmethod
+    async def test_create_session(realtime_model, realtime_session):
+        assert realtime_session.model == realtime_model
+        assert realtime_model.is_connected
+        assert realtime_model.listeners == (realtime_session,)
