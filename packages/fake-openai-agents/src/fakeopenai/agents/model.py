@@ -1,8 +1,7 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
-
-import typing
+from typing import override
 
 from agents import realtime as rt
 
@@ -20,7 +19,7 @@ class FakeRealtimeModel(rt.RealtimeModel):
         self.__is_connected = False
         self.__listeners: list[rt.RealtimeModelListener] = []
 
-    @typing.override
+    @override
     async def connect(self, options: rt.RealtimeModelConfig):
         if self.__is_connected:
             raise AssertionError("Already connected")
@@ -36,12 +35,12 @@ class FakeRealtimeModel(rt.RealtimeModel):
         if listener in self.__listeners:
             self.__listeners.remove(listener)
 
-    @typing.override
+    @override
     async def send_event(self, event: rt.RealtimeModelSendEvent):
         if not self.is_connected:
             raise AssertionError("Not connected")
         raise NotImplementedError()
 
-    @typing.override
+    @override
     async def close(self):
         self.__is_connected = False
