@@ -17,6 +17,7 @@ from openai.types.realtime import (
 )
 from openai.types.realtime import realtime_session_create_request as rt_session_create_request
 from openai.types.realtime import session_created_event
+from openai.types.realtime import session_updated_event
 
 
 class FakeRealtimeModel(rt.RealtimeModel):
@@ -36,6 +37,8 @@ class FakeRealtimeModel(rt.RealtimeModel):
         self.__event_ids = idgen.IdGenerator("event")
         self.__session_ids = idgen.IdGenerator("sess")
 
+        self.__sessions: dict[str, rt_session_create_request.RealtimeSessionCreateRequest] = {}
+
     @override
     async def connect(self, options: rt.RealtimeModelConfig):
         if self.is_connected:
@@ -46,7 +49,7 @@ class FakeRealtimeModel(rt.RealtimeModel):
             type="realtime",
             model="gpt-realtime",
             output_modalities=["audio"],
-            instructions="fake-golem-instructions",
+            instructions="fake-instructions",
             tools=[],
             tool_choice="auto",
             tracing=None,
@@ -76,22 +79,18 @@ class FakeRealtimeModel(rt.RealtimeModel):
             include=None,
         )
 
-        session_message = session_created_event.SessionCreatedEvent(
-            type="session.created", event_id=self.__event_ids.next(), session=session
+        session_id = self.__create_session(session)
+
+        session.instructions = "fake-golem-instructions"
+        assert session.audio is not None
+        assert session.audio.input is not None
+        session.audio.input.turn_detection = rt_audio_input_turn_detection.SemanticVad(
+            type="semantic_vad",
+            eagerness="auto",
+            create_response=True,
+            interrupt_response=True,
         )
-
-        model_dict = session_message.model_dump()
-        session_dict = model_dict["session"]
-
-        session_id = self.__session_ids.next()
-        session_dict.update(
-            {
-                "id": session_id,
-                "object": "realtime.session",
-            }
-        )
-
-        self.__return_server_message(model_dict)
+        self.__update_session(session_id)
 
     def add_listener(self, listener: rt.RealtimeModelListener) -> None:
         """Add a listener to the model."""
@@ -121,6 +120,46 @@ class FakeRealtimeModel(rt.RealtimeModel):
             self.__return_task = None
             while not self.__return_queue.empty():
                 self.__return_queue.get_nowait()
+
+            self.__sessions.clear()
+
+    def __return_session_event(
+        self,
+        session_id,
+        event: session_created_event.SessionCreatedEvent
+        | session_updated_event.SessionUpdatedEvent,
+    ):
+        model_dict = event.model_dump()
+        session_dict = model_dict["session"]
+
+        session_dict.update(
+            {
+                "id": session_id,
+                "object": "realtime.session",
+            }
+        )
+
+        self.__return_server_message(model_dict)
+
+    def __create_session(
+        self, session: rt_session_create_request.RealtimeSessionCreateRequest
+    ) -> str:
+        session_id = self.__session_ids.next()
+        self.__sessions[session_id] = session
+
+        session_created = session_created_event.SessionCreatedEvent(
+            type="session.created", event_id=self.__event_ids.next(), session=session
+        )
+        self.__return_session_event(session_id, session_created)
+        return session_id
+
+    def __update_session(self, session_id):
+        session = self.__sessions[session_id]
+
+        session_updated = session_updated_event.SessionUpdatedEvent(
+            type="session.updated", event_id=self.__event_ids.next(), session=session
+        )
+        self.__return_session_event(session_id, session_updated)
 
     def __return_server_message(self, message: dict[str, Any]):
         server_message = model_events.RealtimeModelRawServerEvent(data=message)

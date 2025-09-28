@@ -29,12 +29,13 @@ async def fake_model() -> AsyncIterator[model.FakeRealtimeModel]:
         await fake_model.close()
 
 
-def assert_session_created_event(event: model_events.RealtimeModelEvent):
-    """Helper function to validate session.created event structure."""
-    assert isinstance(event, model_events.RealtimeModelRawServerEvent)
-    assert event.type == "raw_server_event"
+def assert_initial_session_events(
+    created_event: model_events.RealtimeModelEvent, updated_event: model_events.RealtimeModelEvent
+):
+    assert isinstance(created_event, model_events.RealtimeModelRawServerEvent)
+    assert created_event.type == "raw_server_event"
 
-    assert event.data == {
+    assert created_event.data == {
         "event_id": "event_000001",
         "session": {
             "audio": {
@@ -60,7 +61,7 @@ def assert_session_created_event(event: model_events.RealtimeModelEvent):
             },
             "id": "sess_000001",
             "include": None,
-            "instructions": "fake-golem-instructions",
+            "instructions": "fake-instructions",
             "max_output_tokens": None,
             "model": "gpt-realtime",
             "object": "realtime.session",
@@ -73,6 +74,47 @@ def assert_session_created_event(event: model_events.RealtimeModelEvent):
             "type": "realtime",
         },
         "type": "session.created",
+    }
+
+    assert isinstance(updated_event, model_events.RealtimeModelRawServerEvent)
+    assert updated_event.type == "raw_server_event"
+
+    assert updated_event.data == {
+        "event_id": "event_000002",
+        "session": {
+            "audio": {
+                "input": {
+                    "format": {"rate": 24000, "type": "audio/pcm"},
+                    "noise_reduction": None,
+                    "transcription": None,
+                    "turn_detection": {
+                        "create_response": True,
+                        "eagerness": "auto",
+                        "interrupt_response": True,
+                        "type": "semantic_vad",
+                    },
+                },
+                "output": {
+                    "format": {"rate": 24000, "type": "audio/pcm"},
+                    "speed": 1.0,
+                    "voice": "alloy",
+                },
+            },
+            "id": "sess_000001",
+            "include": None,
+            "instructions": "fake-golem-instructions",
+            "max_output_tokens": None,
+            "model": "gpt-realtime",
+            "object": "realtime.session",
+            "output_modalities": ["audio"],
+            "prompt": None,
+            "tool_choice": "auto",
+            "tools": [],
+            "tracing": None,
+            "truncation": "auto",
+            "type": "realtime",
+        },
+        "type": "session.updated",
     }
 
 
@@ -89,8 +131,9 @@ class TestConnect:
 
         for _ in range(10):
             await asyncio.sleep(0)
-        assert len(listener.events) == 1
-        assert_session_created_event(listener.events[0])
+
+        session_created, session_updated = listener.events
+        assert_initial_session_events(session_created, session_updated)
 
     @staticmethod
     async def test_connected(fake_model):
@@ -221,12 +264,12 @@ class TestReturnMessage:
         for _ in range(10):
             await asyncio.sleep(0)
 
-        assert len(listener1.events) == 2  # session.created + test_event
-        assert len(listener2.events) == 2  # session.created + test_event
-        assert_session_created_event(listener1.events[0])
-        assert listener1.events[1] == test_event
-        assert_session_created_event(listener2.events[0])
-        assert listener2.events[1] == test_event
+        assert len(listener1.events) == 3  # session.created + test_event
+        assert len(listener2.events) == 3  # session.created + test_event
+        assert_initial_session_events(listener1.events[0], listener1.events[1])
+        assert listener1.events[2] == test_event
+        assert_initial_session_events(listener2.events[0], listener2.events[1])
+        assert listener2.events[2] == test_event
 
     @staticmethod
     async def test_not_connected(fake_model):
@@ -260,8 +303,8 @@ class TestReturnMessage:
         for _ in range(10):
             await asyncio.sleep(0)
 
-        assert len(listener.events) == 1  # test_event + session.created
-        assert_session_created_event(listener.events[0])
+        created_event, updated_event = listener.events
+        assert_initial_session_events(created_event, updated_event)
 
 
 class TestRunning:
