@@ -335,6 +335,11 @@ class TestFakeRawInputStream:
         assert stream.samplesize == 4
 
     @staticmethod
+    def test_unsupported_dtype():
+        with pytest.raises(NotImplementedError, match="Unsupported dtype: 'float32'"):
+            devices.FakeRawInputStream(dtype="float32")
+
+    @staticmethod
     def test_constructor_with_params():
         def callback():
             pass
