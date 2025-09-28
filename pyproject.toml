@@ -17,6 +17,7 @@ dev-dependencies = [
 
 [tool.uv.sources]
 fake-sounddevice = { workspace = true }
+fake-openai-agents = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
