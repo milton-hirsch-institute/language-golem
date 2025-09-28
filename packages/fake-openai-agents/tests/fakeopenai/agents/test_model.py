@@ -10,6 +10,14 @@ from agents import realtime as rt
 from agents.realtime import model_events
 from fakeopenai.agents import model
 from openai.types.realtime import conversation_item_deleted_event
+from openai.types.realtime import realtime_audio_config as rt_audio_config
+from openai.types.realtime import realtime_audio_config_input as rt_audio_config_input
+from openai.types.realtime import realtime_audio_config_output as rt_audio_config_output
+from openai.types.realtime import realtime_audio_formats as rt_audio_formats
+from openai.types.realtime import (
+    realtime_audio_input_turn_detection as rt_audio_input_turn_detection,
+)
+from openai.types.realtime import session_created_event
 
 
 class FakeRealtimeModelListener(rt.RealtimeModelListener):
@@ -30,14 +38,53 @@ async def fake_model() -> AsyncIterator[model.FakeRealtimeModel]:
         await fake_model.close()
 
 
+def assert_session_created_event(event: model_events.RealtimeModelEvent):
+    """Helper function to validate session.created event structure."""
+    assert isinstance(event, model_events.RealtimeModelRawServerEvent)
+    assert event.type == "raw_server_event"
+
+    session_event = session_created_event.SessionCreatedEvent(**event.data)
+    assert session_event.type == "session.created"
+    assert session_event.event_id.startswith("event_")
+
+    # Compare against expected session structure
+    session = session_event.session
+    assert session.type == "realtime"
+    assert session.model == "gpt-realtime"
+    assert session.output_modalities == ["audio"]
+    assert session.instructions == "fake-golem-instructions"
+    assert session.tools == []
+    assert session.tool_choice == "auto"
+    assert session.truncation == "auto"
+    assert isinstance(session.audio, rt_audio_config.RealtimeAudioConfig)
+    assert isinstance(session.audio.input, rt_audio_config_input.RealtimeAudioConfigInput)
+    assert isinstance(session.audio.input.format, rt_audio_formats.AudioPCM)
+    assert session.audio.input.format.rate == 24000
+    assert session.audio.input.format.type == "audio/pcm"
+    assert isinstance(session.audio.input.turn_detection, rt_audio_input_turn_detection.ServerVad)
+    assert session.audio.input.turn_detection.type == "server_vad"
+    assert isinstance(session.audio.output, rt_audio_config_output.RealtimeAudioConfigOutput)
+    assert isinstance(session.audio.output.format, rt_audio_formats.AudioPCM)
+    assert session.audio.output.format.rate == 24000
+    assert session.audio.output.format.type == "audio/pcm"
+    assert session.audio.output.voice == "alloy"
+
+
 class TestConnect:
     @staticmethod
     async def test_not_connected(fake_model):
         config = rt.RealtimeModelConfig()
+        listener = FakeRealtimeModelListener()
+        fake_model.add_listener(listener)
 
         assert not fake_model.is_connected
         await fake_model.connect(config)
         assert fake_model.is_connected
+
+        for _ in range(10):
+            await asyncio.sleep(0)
+        assert len(listener.events) == 1
+        assert_session_created_event(listener.events[0])
 
     @staticmethod
     async def test_connected(fake_model):
@@ -168,8 +215,12 @@ class TestReturnMessage:
         for _ in range(10):
             await asyncio.sleep(0)
 
-        assert listener1.events == [test_event]
-        assert listener2.events == [test_event]
+        assert len(listener1.events) == 2  # session.created + test_event
+        assert len(listener2.events) == 2  # session.created + test_event
+        assert_session_created_event(listener1.events[0])
+        assert listener1.events[1] == test_event
+        assert_session_created_event(listener2.events[0])
+        assert listener2.events[1] == test_event
 
     @staticmethod
     async def test_not_connected(fake_model):
@@ -178,7 +229,8 @@ class TestReturnMessage:
         fake_model.add_listener(listener)
 
         test_event = model_events.RealtimeModelRawServerEvent(data={"type": "test"})
-        fake_model.return_message(test_event)
+        with pytest.raises(AssertionError, match="Model is not connected"):
+            fake_model.return_message(test_event)
 
         await asyncio.sleep(0.01)
 
@@ -192,7 +244,8 @@ class TestReturnMessage:
         fake_model.add_listener(listener)
 
         test_event = model_events.RealtimeModelTurnStartedEvent()
-        fake_model.return_message(test_event)
+        with pytest.raises(AssertionError, match="Model is not connected"):
+            fake_model.return_message(test_event)
 
         await asyncio.sleep(0)
         assert listener.events == []
@@ -201,7 +254,8 @@ class TestReturnMessage:
         for _ in range(10):
             await asyncio.sleep(0)
 
-        assert listener.events == [test_event]
+        assert len(listener.events) == 1  # test_event + session.created
+        assert_session_created_event(listener.events[0])
 
 
 class TestReturnServerMessage:
@@ -220,8 +274,9 @@ class TestReturnServerMessage:
 
         await asyncio.sleep(0.01)
 
-        assert len(listener.events) == 1
-        received_event = listener.events[0]
+        assert len(listener.events) == 2  # session.created + test event
+        assert_session_created_event(listener.events[0])
+        received_event = listener.events[1]  # The test event is second
         assert isinstance(received_event, model_events.RealtimeModelRawServerEvent)
         assert received_event.type == "raw_server_event"
 

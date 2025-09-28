@@ -6,7 +6,17 @@ from typing import override
 
 from agents import realtime as rt
 from agents.realtime import model_events
+from fakeopenai.agents import idgen
+from openai.types.realtime import realtime_audio_config as rt_audio_config
+from openai.types.realtime import realtime_audio_config_input as rt_audio_config_input
+from openai.types.realtime import realtime_audio_config_output as rt_audio_config_output
+from openai.types.realtime import realtime_audio_formats as rt_audio_formats
+from openai.types.realtime import (
+    realtime_audio_input_turn_detection as rt_audio_input_turn_detection,
+)
 from openai.types.realtime import realtime_server_event as rt_server_event
+from openai.types.realtime import realtime_session_create_request as rt_session_create_request
+from openai.types.realtime import session_created_event
 
 
 class FakeRealtimeModel(rt.RealtimeModel):
@@ -23,11 +33,53 @@ class FakeRealtimeModel(rt.RealtimeModel):
         self.__return_task: asyncio.Task[None] | None = None
         self.__listeners: list[rt.RealtimeModelListener] = []
 
+        self.__event_ids = idgen.IdGenerator("event")
+        self.__session_ids = idgen.IdGenerator("sess")
+
     @override
     async def connect(self, options: rt.RealtimeModelConfig):
         if self.is_connected:
             raise AssertionError("Already connected")
         self.__return_task = asyncio.create_task(self.__send_return_messages())
+
+        session = rt_session_create_request.RealtimeSessionCreateRequest(
+            type="realtime",
+            model="gpt-realtime",
+            output_modalities=["audio"],
+            instructions="fake-golem-instructions",
+            tools=[],
+            tool_choice="auto",
+            tracing=None,
+            truncation="auto",
+            prompt=None,
+            audio=rt_audio_config.RealtimeAudioConfig(
+                input=rt_audio_config_input.RealtimeAudioConfigInput(
+                    format=rt_audio_formats.AudioPCM(rate=24000, type="audio/pcm"),
+                    transcription=None,
+                    noise_reduction=None,
+                    turn_detection=rt_audio_input_turn_detection.ServerVad(
+                        type="server_vad",
+                        threshold=0.5,
+                        prefix_padding_ms=300,
+                        silence_duration_ms=200,
+                        idle_timeout_ms=None,
+                        create_response=True,
+                        interrupt_response=True,
+                    ),
+                ),
+                output=rt_audio_config_output.RealtimeAudioConfigOutput(
+                    format=rt_audio_formats.AudioPCM(rate=24000, type="audio/pcm"),
+                    voice="alloy",
+                    speed=1.0,
+                ),
+            ),
+            include=None,
+        )
+
+        session_message = session_created_event.SessionCreatedEvent(
+            type="session.created", event_id=self.__event_ids.next(), session=session
+        )
+        self.return_server_message(session_message)
 
     def add_listener(self, listener: rt.RealtimeModelListener) -> None:
         """Add a listener to the model."""
@@ -64,7 +116,10 @@ class FakeRealtimeModel(rt.RealtimeModel):
         self.return_message(server_message)
 
     def return_message(self, message: model_events.RealtimeModelEvent):
-        self.__return_queue.put_nowait(message)
+        if self.is_connected:
+            self.__return_queue.put_nowait(message)
+        else:
+            raise AssertionError("Model is not connected")
 
     async def __send_return_messages(self):
         while True:
