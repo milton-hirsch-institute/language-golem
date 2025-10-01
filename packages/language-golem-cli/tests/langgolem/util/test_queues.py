@@ -113,3 +113,9 @@ class TestQueueStream:
         assert stream.read(3) == b"mno"
         assert stream.read(3) == b"p"
         assert stream.read(3) == b""
+
+    @staticmethod
+    @pytest.mark.parametrize("queue_content", [[b"abcd", b"efgh", b"ijkl", b"mnop"]])
+    @pytest.mark.parametrize("count", [None, -1, -2])
+    def test_read_all(stream, count):
+        assert stream.read(None) == b"abcdefghijklmnop"

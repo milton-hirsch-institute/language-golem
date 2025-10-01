@@ -41,9 +41,11 @@ class QueueStream:
         self.__current_bytes = b""
         self.__offset = 0
 
-    def read(self, count: int) -> bytes:
+    def read(self, count: int | None = -1, /) -> bytes:
+        if count is not None and count < 0:
+            count = None
         result = bytearray()
-        while count > 0:
+        while count is None or count > 0:
             if self.__offset >= len(self.__current_bytes):
                 self.__offset = 0
                 try:
@@ -51,8 +53,12 @@ class QueueStream:
                 except asyncio.QueueEmpty:
                     self.__current_bytes = b""
                     break
-            next_bytes = self.__current_bytes[self.__offset : self.__offset + count]
+            if count is None:
+                next_bytes = self.__current_bytes[self.__offset :]
+            else:
+                next_bytes = self.__current_bytes[self.__offset : self.__offset + count]
             self.__offset += len(next_bytes)
             result.extend(next_bytes)
-            count -= len(next_bytes)
+            if count is not None:
+                count -= len(next_bytes)
         return bytes(result)
