@@ -9,6 +9,8 @@ from typing import Any
 import sounddevice
 from agents import realtime as rt
 from langgolem.audio import devices
+from langgolem.util import misc
+from langgolem.util import types as langgolem_types
 
 
 @dataclasses.dataclass
@@ -33,6 +35,16 @@ async def default_input_queuer(queue: asyncio.Queue[RawAudio]):
 
     with devices.default_input_stream(callback):
         await asyncio.Future()
+
+
+async def stream_queuer(
+    stream: langgolem_types.BytesReader,
+    queue: asyncio.Queue[RawAudio],
+    *,
+    block_size: int = 1 << 16,
+):
+    while block := stream.read(block_size):
+        await queue.put(RawAudio(buffer=block, frames=int(len(block) / 2), time=misc.time()))
 
 
 async def default_input_iterator() -> AsyncIterator[RawAudio]:

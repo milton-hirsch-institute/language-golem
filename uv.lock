@@ -408,6 +408,7 @@ dependencies = [
     { name = "click" },
     { name = "openai-agents" },
     { name = "sounddevice" },
+    { name = "tyminator" },
     { name = "websockets" },
 ]
 
@@ -423,6 +424,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.0,<9.0" },
     { name = "openai-agents", specifier = ">=0.3,<1.0" },
     { name = "sounddevice", specifier = ">=0.5.2,<1.0" },
+    { name = "tyminator", specifier = ">=1.0,<2.0" },
     { name = "websockets", specifier = ">=15.0,<16.0" },
 ]
 
@@ -877,6 +879,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540 },
 ]
+
+[[package]]
+name = "tyminator"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/1b/51a14abd581d7e61a016c4a34d504db4df014af4cfbf2c699875a69c3eb4/tyminator-1.0.1.tar.gz", hash = "sha256:272ab64a1f0c0d6260676e8fd6d68df6bbff52355a688f5863891adbaef433ae", size = 10265 }
 
 [[package]]
 name = "types-requests"

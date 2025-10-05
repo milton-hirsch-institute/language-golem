@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import asyncio
+import io
 
 import pytest
 from fakesd import waves
 from langgolem.audio import asyncaudio
+from langgolem.util import queues
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +43,30 @@ async def test_default_input_queuer():
 
     all_sound = b"".join(r.buffer for r in audio_records)
     assert all_sound == waves.create_sawtooth_wave(0.1, 2.0, 24000.0, 2)
+
+
+async def test_stream_queuer(fake_clock):
+    queue = asyncio.Queue[asyncaudio.RawAudio]()
+    input = io.BytesIO(b"abcdefghijklmnopqr")
+
+    await asyncaudio.stream_queuer(input, queue, block_size=4)
+
+    block1, block2, block3, block4, block5 = queues.empty_queue(queue)
+    assert block1 == asyncaudio.RawAudio(
+        buffer=b"abcd", frames=2, time=fake_clock.dt_at_step(0).timestamp()
+    )
+    assert block2 == asyncaudio.RawAudio(
+        buffer=b"efgh", frames=2, time=fake_clock.dt_at_step(1).timestamp()
+    )
+    assert block3 == asyncaudio.RawAudio(
+        buffer=b"ijkl", frames=2, time=fake_clock.dt_at_step(2).timestamp()
+    )
+    assert block4 == asyncaudio.RawAudio(
+        buffer=b"mnop", frames=2, time=fake_clock.dt_at_step(3).timestamp()
+    )
+    assert block5 == asyncaudio.RawAudio(
+        buffer=b"qr", frames=1, time=fake_clock.dt_at_step(4).timestamp()
+    )
 
 
 async def test_default_input_iterator():

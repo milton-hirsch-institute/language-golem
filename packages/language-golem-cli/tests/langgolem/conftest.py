@@ -1,6 +1,9 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+# Copyright 2025 The Milton Hirsch Institute, B.V.
+# SPDX-License-Identifier: Apache-2.0
+import datetime
 from collections.abc import AsyncIterator
 from collections.abc import Iterator
 
@@ -8,6 +11,15 @@ import fakesd
 import pytest
 from agents import realtime as rt
 from fakeopenai.agents import model as fake_model
+from langgolem.util import misc
+from tyminator import clock
+
+
+@pytest.fixture
+def fake_clock(monkeypatch) -> clock.Clock:
+    instance = clock.Clock(datetime.datetime(2011, 6, 12), datetime.timedelta(milliseconds=100))
+    monkeypatch.setattr(misc, "time", instance.time_function)
+    return instance
 
 
 @pytest.fixture
