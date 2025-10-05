@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import sounddevice
+from agents import realtime as rt
 from langgolem.audio import devices
 
 
@@ -43,3 +44,16 @@ async def default_input_iterator() -> AsyncIterator[RawAudio]:
     finally:
         task.cancel()
         await task
+
+
+async def audio_sender(
+    session: rt.RealtimeSession, input_queue: asyncio.Queue[RawAudio], commit_size: int = 1 << 16
+):
+    sent_bytes = 0
+    try:
+        while audio := await input_queue.get():
+            sent_bytes += len(audio.buffer)
+            commit = bool(sent_bytes >= commit_size)
+            await session.send_audio(audio.buffer, commit=commit)
+    except asyncio.CancelledError:
+        pass

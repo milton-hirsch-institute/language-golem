@@ -58,3 +58,29 @@ async def test_default_input_iterator():
 
     all_sound = b"".join(r.buffer for r in audio_records)
     assert all_sound == waves.create_sawtooth_wave(0.1, 2.0, 24000.0, 2)
+
+
+async def test_audio_sender(realtime_session, realtime_model):
+    queue = asyncio.Queue[asyncaudio.RawAudio]()
+
+    task = asyncio.create_task(asyncaudio.audio_sender(realtime_session, queue, commit_size=7))
+
+    async def do_test():
+        try:
+            # To small to commit
+            await queue.put(asyncaudio.RawAudio(buffer=b"block1", frames=6, time=0.0))
+            for _ in range(10):
+                await asyncio.sleep(0)
+            assert realtime_model.pending_audio == b"block1"
+            assert realtime_model.committed_audio == b""
+
+            # Passes the commit boundary
+            await queue.put(asyncaudio.RawAudio(buffer=b"block2", frames=6, time=0.0))
+            for _ in range(10):
+                await asyncio.sleep(0)
+            assert realtime_model.pending_audio == b""
+            assert realtime_model.committed_audio == b"block1block2"
+        finally:
+            task.cancel()
+
+    await asyncio.gather(task, do_test())
