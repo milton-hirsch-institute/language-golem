@@ -7,6 +7,7 @@ from typing import override
 
 from agents import realtime as rt
 from agents.realtime import model_events
+from agents.realtime import model_inputs
 from fakeopenai.agents import idgen
 from openai.types.realtime import realtime_audio_config as rt_audio_config
 from openai.types.realtime import realtime_audio_config_input as rt_audio_config_input
@@ -29,6 +30,14 @@ class FakeRealtimeModel(rt.RealtimeModel):
     def listeners(self) -> tuple[rt.RealtimeModelListener, ...]:
         return tuple(self.__listeners)
 
+    @property
+    def pending_audio(self) -> bytes:
+        return bytes(self.__pending_audio)
+
+    @property
+    def committed_audio(self) -> bytes:
+        return bytes(self.__committed_audio)
+
     def __init__(self):
         self.__return_queue = asyncio.Queue[model_events.RealtimeModelEvent]()
         self.__return_task: asyncio.Task[None] | None = None
@@ -39,8 +48,13 @@ class FakeRealtimeModel(rt.RealtimeModel):
 
         self.__sessions: dict[str, rt_session_create_request.RealtimeSessionCreateRequest] = {}
 
+        self.__pending_audio = bytearray()
+        self.__committed_audio = bytearray()
+
     @override
     async def connect(self, options: rt.RealtimeModelConfig):
+        self.__pending_audio.clear()
+        self.__committed_audio.clear()
         if self.is_connected:
             raise AssertionError("Already connected")
         self.__return_task = asyncio.create_task(self.__send_return_messages())
@@ -106,7 +120,15 @@ class FakeRealtimeModel(rt.RealtimeModel):
     async def send_event(self, event: rt.RealtimeModelSendEvent):
         if not self.is_connected:
             raise AssertionError("Not connected")
-        raise NotImplementedError()
+        match event:
+            case model_inputs.RealtimeModelSendAudio() as send_audio:
+                self.__pending_audio.extend(send_audio.audio)
+                if send_audio.commit:
+                    self.__committed_audio.extend(self.__pending_audio)
+                    self.__pending_audio.clear()
+
+            case _:
+                raise NotImplementedError()
 
     @override
     async def close(self):

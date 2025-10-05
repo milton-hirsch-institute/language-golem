@@ -8,6 +8,7 @@ from typing import override
 import pytest
 from agents import realtime as rt
 from agents.realtime import model_events
+from agents.realtime import model_inputs
 from fakeopenai.agents import model
 
 
@@ -21,8 +22,20 @@ class FakeRealtimeModelListener(rt.RealtimeModelListener):
 
 
 @pytest.fixture
-async def fake_model() -> AsyncIterator[model.FakeRealtimeModel]:
+def model_config() -> rt.RealtimeModelConfig:
+    return rt.RealtimeModelConfig()
+
+
+@pytest.fixture
+def connect_model() -> bool:
+    return True
+
+
+@pytest.fixture
+async def fake_model(connect_model, model_config) -> AsyncIterator[model.FakeRealtimeModel]:
     fake_model = model.FakeRealtimeModel()
+    if connect_model:
+        await fake_model.connect(model_config)
     try:
         yield fake_model
     finally:
@@ -118,6 +131,15 @@ def assert_initial_session_events(
     }
 
 
+@pytest.mark.parametrize("connect_model", [False])
+async def test_constructor(fake_model: model.FakeRealtimeModel):
+    assert fake_model.is_connected is False
+    assert fake_model.listeners == ()
+    assert fake_model.pending_audio == b""
+    assert fake_model.committed_audio == b""
+
+
+@pytest.mark.parametrize("connect_model", [False])
 class TestConnect:
     @staticmethod
     async def test_not_connected(fake_model):
@@ -141,10 +163,32 @@ class TestConnect:
 
         await fake_model.connect(config)
 
+        assert fake_model.is_connected
+
         with pytest.raises(AssertionError, match="Already connected"):
             await fake_model.connect(config)
 
         assert fake_model.is_connected
+
+    @staticmethod
+    async def test_clear_audio(fake_model):
+        config = rt.RealtimeModelConfig()
+
+        await fake_model.connect(config)
+
+        await fake_model.send_event(
+            model_inputs.RealtimeModelSendAudio(audio=b"committed", commit=True)
+        )
+        await fake_model.send_event(
+            model_inputs.RealtimeModelSendAudio(audio=b"pending", commit=False)
+        )
+
+        await fake_model.close()
+
+        await fake_model.connect(config)
+
+        assert fake_model.pending_audio == b""
+        assert fake_model.committed_audio == b""
 
 
 class TestAddListener:
@@ -192,18 +236,35 @@ class TestRemoveListener:
 
 class TestSendEvent:
     @staticmethod
+    @pytest.mark.parametrize("connect_model", [False])
     async def test_not_connected(fake_model):
         event = rt.RealtimeModelSendInterrupt()
 
         with pytest.raises(AssertionError, match="Not connected"):
             await fake_model.send_event(event)
 
+    class TestSendAudio:
+        @staticmethod
+        async def test_uncommitted(fake_model):
+            event = rt.RealtimeModelSendAudio(audio=b"block1", commit=False)
+            await fake_model.send_event(event)
+
+            assert fake_model.pending_audio == b"block1"
+            assert fake_model.committed_audio == b""
+
+        @staticmethod
+        async def test_committed(fake_model):
+            event = rt.RealtimeModelSendAudio(audio=b"block1", commit=False)
+            await fake_model.send_event(event)
+            event = rt.RealtimeModelSendAudio(audio=b"block2", commit=True)
+            await fake_model.send_event(event)
+
+            assert fake_model.pending_audio == b""
+            assert fake_model.committed_audio == b"block1block2"
+
     @staticmethod
     async def test_not_implemented(fake_model):
-        config = rt.RealtimeModelConfig()
         event = rt.RealtimeModelSendInterrupt()
-
-        await fake_model.connect(config)
 
         with pytest.raises(NotImplementedError):
             await fake_model.send_event(event)
@@ -218,20 +279,13 @@ class TestClose:
         assert not fake_model.is_connected
 
     @staticmethod
-    async def test_reconnect(fake_model):
-        config = rt.RealtimeModelConfig()
-
-        await fake_model.connect(config)
+    async def test_reconnect(fake_model, model_config):
         await fake_model.close()
-        await fake_model.connect(config)
+        await fake_model.connect(model_config)
         assert fake_model.is_connected
 
     @staticmethod
-    async def test_queue_cleanup(fake_model):
-        config = rt.RealtimeModelConfig()
-
-        await fake_model.connect(config)
-
+    async def test_queue_cleanup(fake_model, model_config):
         test_event = model_events.RealtimeModelTurnStartedEvent()
         fake_model.return_message(test_event)
         fake_model.return_message(test_event)
@@ -240,13 +294,14 @@ class TestClose:
 
         listener = FakeRealtimeModelListener()
         fake_model.add_listener(listener)
-        await fake_model.connect(config)
+        await fake_model.connect(model_config)
 
         await asyncio.sleep(0)
 
         assert len(listener.events) == 0
 
 
+@pytest.mark.parametrize("connect_model", [False])
 class TestReturnMessage:
     @staticmethod
     async def test_multiple_listeners(fake_model):
@@ -336,6 +391,11 @@ class TestRunning:
         assert realtime_model.listeners == (realtime_session,)
 
     @staticmethod
-    async def test_send_audio(realtime_session):
-        with pytest.raises(NotImplementedError):
-            await realtime_session.send_audio(b"realtime-audio")
+    async def test_send_audio(realtime_session, realtime_model):
+        await realtime_session.send_audio(b"block1")
+        assert realtime_model.pending_audio == b"block1"
+        assert realtime_model.committed_audio == b""
+
+        await realtime_session.send_audio(b"block2", commit=True)
+        assert realtime_model.pending_audio == b""
+        assert realtime_model.committed_audio == b"block1block2"
