@@ -19,6 +19,5 @@ def setup(
         device_manager = devices.DeviceManager.new_basic()
     with monkeypatch.Patcher() as patcher:
         patcher.patch(sd, "query_devices", device_manager.query_devices)
-        patcher.patch(sd, "InputStream", streaming.FakeInputStream)
         patcher.patch(sd, "RawInputStream", streaming.FakeRawInputStream)
         yield device_manager

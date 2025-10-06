@@ -8,8 +8,8 @@ from fakesd import streaming
 AudioInputCallback = streaming.AudioInputCallback
 Device = devices.Device
 DeviceManager = devices.DeviceManager
-FakeInputStream = streaming.FakeInputStream
 FakeRawInputStream = streaming.FakeRawInputStream
+FakeStream = streaming.FakeStream
 HostApi = devices.HostApi
 
 setup = patching.setup
@@ -18,8 +18,8 @@ __all__ = [
     "AudioInputCallback",
     "Device",
     "DeviceManager",
-    "FakeInputStream",
     "FakeRawInputStream",
+    "FakeStream",
     "HostApi",
     "setup",
 ]

@@ -38,7 +38,7 @@ class TimeStruct:
 type AudioInputCallback = Callable[[Any, int, Time, sd.CallbackFlags], None]
 
 
-class FakeRawInputStream(sd.RawInputStream):
+class FakeStream(sounddevice._StreamBase):  # pyright: ignore[reportPrivateUsage]
     @property
     def active(self):
         if self.closed:
@@ -60,10 +60,6 @@ class FakeRawInputStream(sd.RawInputStream):
     @property
     def cpu_load(self):
         return self.__cpu_load
-
-    @property
-    def read_available(self):
-        raise NotImplementedError()
 
     def __init__(
         self,
@@ -116,6 +112,25 @@ class FakeRawInputStream(sd.RawInputStream):
             raise sd.PortAudioError("Error starting stream pointer [PaErrorCode -9988]")
         self.__active = True
 
+    def stop(self, ignore_errors: bool = True):
+        if not ignore_errors:
+            raise NotImplementedError()
+        self.__active = False
+
+    def close(self, ignore_errors: bool = True):
+        if not ignore_errors:
+            raise NotImplementedError()
+        self._ptr = None
+
+
+class FakeRawInputStream(FakeStream, sd.RawInputStream):
+    @property
+    def read_available(self):
+        raise NotImplementedError()
+
+    def start(self):
+        super().start()
+
         if self._callback is not None:
             # Generate a whole bunch of audio - 2 seconds worth
             bytes_per_frame = DTYPE_TO_BYTE_SIZE[self._dtype]
@@ -135,49 +150,3 @@ class FakeRawInputStream(sd.RawInputStream):
             current_time = (block_count / float(bytes_per_frame)) / self._samplerate
             time_struct = TimeStruct(0, current_time, 0)
             self._callback(b"", 0, time_struct, sounddevice.CallbackFlags())
-
-    def stop(self, ignore_errors: bool = True):
-        if not ignore_errors:
-            raise NotImplementedError()
-        self.__active = False
-
-    def close(self, ignore_errors: bool = True):
-        if not ignore_errors:
-            raise NotImplementedError()
-        self._ptr = None
-
-
-class FakeInputStream(FakeRawInputStream, sd.InputStream):
-    def __init__(
-        self,
-        samplerate: float | None = None,
-        blocksize: int | None = None,
-        device: int | None = None,
-        channels: int | None = None,
-        dtype: str | None = None,
-        latency: float | None = None,
-        extra_settings=None,
-        callback: AudioInputCallback | None = None,
-        finished_callback=None,
-        clip_off=None,
-        dither_off=None,
-        never_drop_input=None,
-        prime_output_buffers_using_stream_callback=None,
-    ):
-        # Call FakeRawInputStream constructor to initialize fake stream
-        FakeRawInputStream.__init__(
-            self,
-            samplerate=samplerate,
-            blocksize=blocksize,
-            device=device,
-            channels=channels,
-            dtype=dtype,
-            latency=latency,
-            extra_settings=extra_settings,
-            callback=callback,
-            finished_callback=finished_callback,
-            clip_off=clip_off,
-            dither_off=dither_off,
-            never_drop_input=never_drop_input,
-            prime_output_buffers_using_stream_callback=prime_output_buffers_using_stream_callback,
-        )

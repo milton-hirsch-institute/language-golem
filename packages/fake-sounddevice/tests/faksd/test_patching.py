@@ -16,7 +16,6 @@ class TestSetup:
         with patching.setup(init_device_manager) as device_manager:
             # Check symbols
             assert sd.query_devices == device_manager.query_devices
-            assert sd.InputStream is streaming.FakeInputStream
             assert sd.RawInputStream is streaming.FakeRawInputStream
 
             # Check device manager
