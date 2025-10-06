@@ -43,7 +43,7 @@ async def stream_queuer(
     *,
     block_size: int = 1 << 16,
 ):
-    while block := stream.read(block_size):
+    while block := await asyncio.to_thread(stream.read, block_size):
         await queue.put(RawAudio(buffer=block, frames=int(len(block) / 2), time=misc.time()))
 
 
