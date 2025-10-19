@@ -1,13 +1,64 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any
 from typing import cast
 
 import pytest
 import sounddevice as sd
 from fakesd import streaming
 from fakesd import waves
+
+
+class TestFakeCffiBuffer:
+    @staticmethod
+    @pytest.fixture
+    def buf() -> streaming.FakeCffiBuffer:
+        return streaming.FakeCffiBuffer(b"abcdef")
+
+    class TestConstructor:
+        @staticmethod
+        def test_int():
+            buf = streaming.FakeCffiBuffer(3)
+            assert bytes(buf) == b"\0\0\0"
+
+        @staticmethod
+        def test_bytes():
+            buf = streaming.FakeCffiBuffer(b"abc")
+            assert bytes(buf) == b"abc"
+
+        @staticmethod
+        def test_bytearray():
+            ba = bytearray(b"abc")
+            buf = streaming.FakeCffiBuffer(ba)
+            assert bytes(buf) == b"abc"
+            buf[0] = ord("A")
+            assert bytes(ba) == b"Abc"
+
+    @staticmethod
+    @pytest.mark.parametrize("param, expected", [(4, 4), (b"abcdef", 6), (bytearray(b"abc"), 3)])
+    def test_len(param, expected):
+        buf = streaming.FakeCffiBuffer(param)
+        assert len(buf) == expected
+
+    class TestGetItem:
+        @staticmethod
+        def test_int(buf):
+            assert buf[2] == ord("c")
+
+        @staticmethod
+        def test_slice(buf):
+            assert buf[2:4] == b"cd"
+
+    class TestSetItem:
+        @staticmethod
+        def test_int(buf):
+            buf[2] = ord("C")
+            assert bytes(buf) == b"abCdef"
+
+        @staticmethod
+        def test_slice(buf):
+            buf[2:4] = b"CD"
+            assert bytes(buf) == b"abCDef"
 
 
 class TestFakeStream:
@@ -59,7 +110,7 @@ class TestFakeStream:
             channels=2,
             dtype="int16",
             latency=0.05,
-            callback=cast(streaming.AudioInputCallback, callback),
+            callback=cast(streaming.AudioCallback, callback),
             extra_settings={"test": True},
             finished_callback=finished_callback,
             clip_off=True,
@@ -197,17 +248,22 @@ class TestFakeRawInputStream:
         def test_with_callback():
             blocks: list[tuple[bytes, float]] = []
 
-            def callback(block: Any, frames: int, time: streaming.Time, status: sd.CallbackFlags):
+            def callback(
+                block: streaming.CffiBuffer,
+                frames: int,
+                time: streaming.Time,
+                status: sd.CallbackFlags,
+            ):
                 # Handle the end-of-input empty callback
                 if frames == 0:
-                    assert block == b""
+                    assert bytes(block) == b""
                 else:
                     assert frames == 4
                     assert len(block) == 8
                 assert time.currentTime == 0
                 assert time.outputBufferDacTime == 0
                 assert isinstance(status, sd.CallbackFlags)
-                blocks.append((block, time.inputBufferAdcTime))
+                blocks.append((bytes(block), time.inputBufferAdcTime))
 
             raw_input_stream = streaming.FakeRawInputStream(
                 blocksize=4, dtype="int16", callback=callback

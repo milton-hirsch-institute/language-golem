@@ -5,7 +5,6 @@ import dataclasses
 import math
 import typing
 from collections.abc import Callable
-from typing import Any
 
 import sounddevice
 import sounddevice as sd
@@ -35,7 +34,64 @@ class TimeStruct:
     outputBufferDacTime: float
 
 
-type AudioInputCallback = Callable[[Any, int, Time, sd.CallbackFlags], None]
+class CffiBuffer(typing.Protocol):
+    def __len__(self) -> int: ...
+
+    @typing.overload
+    def __getitem__(self, item: int) -> int: ...
+
+    @typing.overload
+    def __getitem__(self, item: slice) -> bytes: ...
+
+    def __getitem__(self, item: int | slice) -> int | bytes: ...
+
+    @typing.overload
+    def __setitem__(self, key: int, value: int): ...
+
+    @typing.overload
+    def __setitem__(self, key: slice, value: bytes): ...
+
+    def __setitem__(self, key: int | slice, value: int | bytes): ...
+
+    def __bytes__(self) -> bytes: ...
+
+
+class FakeCffiBuffer:
+    def __init__(self, param: int | bytes | bytearray):
+        if isinstance(param, bytearray):
+            self.__buffer = param
+        else:
+            self.__buffer = bytearray(param)
+
+    def __len__(self) -> int:
+        return len(self.__buffer)
+
+    @typing.overload
+    def __getitem__(self, item: int) -> int: ...
+
+    @typing.overload
+    def __getitem__(self, item: slice) -> bytes: ...
+
+    def __getitem__(self, item: int | slice) -> int | bytes:
+        if isinstance(item, slice):
+            return bytes(self.__buffer[item])
+        else:
+            return self.__buffer[item]
+
+    @typing.overload
+    def __setitem__(self, key: int, value: int): ...
+
+    @typing.overload
+    def __setitem__(self, key: slice, value: bytes): ...
+
+    def __setitem__(self, key: int | slice, value: int | bytes):
+        self.__buffer[key] = value  # pyright: ignore[reportCallIssue, reportArgumentType]
+
+    def __bytes__(self) -> bytes:
+        return bytes(self.__buffer)
+
+
+type AudioCallback = Callable[[CffiBuffer, int, Time, sd.CallbackFlags], None]
 
 
 class FakeStream(sounddevice._StreamBase):  # pyright: ignore[reportPrivateUsage]
@@ -70,7 +126,7 @@ class FakeStream(sounddevice._StreamBase):  # pyright: ignore[reportPrivateUsage
         dtype: str | None = None,
         latency: float | None = None,
         extra_settings=None,
-        callback: AudioInputCallback | None = None,
+        callback: AudioCallback | None = None,
         finished_callback=None,
         clip_off=None,
         dither_off=None,
@@ -141,7 +197,7 @@ class FakeRawInputStream(FakeStream, sd.RawInputStream):
 
             for index in range(block_count):
                 start = index * bytes_per_block
-                block = audio[start : start + bytes_per_block]
+                block = FakeCffiBuffer(audio[start : start + bytes_per_block])
                 current_time = (index / float(bytes_per_frame)) / self._samplerate
                 time_struct = TimeStruct(0, current_time, 0)
                 self._callback(block, self._blocksize, time_struct, sounddevice.CallbackFlags())
@@ -149,4 +205,4 @@ class FakeRawInputStream(FakeStream, sd.RawInputStream):
             # Add an empty callback for use by some tests to know when end of input occurs
             current_time = (block_count / float(bytes_per_frame)) / self._samplerate
             time_struct = TimeStruct(0, current_time, 0)
-            self._callback(b"", 0, time_struct, sounddevice.CallbackFlags())
+            self._callback(FakeCffiBuffer(b""), 0, time_struct, sounddevice.CallbackFlags())

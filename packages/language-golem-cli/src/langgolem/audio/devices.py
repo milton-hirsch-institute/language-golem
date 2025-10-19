@@ -35,7 +35,7 @@ class AudioDevice:
 
 
 def default_input_device() -> AudioDevice:
-    return AudioDevice(**sounddevice.query_devices(kind="input"))
+    return AudioDevice(**sounddevice.query_devices(kind="input"))  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 def default_input_stream(callback: AudioInputCallback) -> sounddevice.RawInputStream:
