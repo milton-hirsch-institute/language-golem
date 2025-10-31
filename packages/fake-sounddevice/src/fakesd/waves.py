@@ -1,6 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Audio waveform generation utilities."""
+
 
 def create_sawtooth_wave(
     period: float, seconds: float, sample_rate: float, bytes_per_frame: int, start: float = 0.0

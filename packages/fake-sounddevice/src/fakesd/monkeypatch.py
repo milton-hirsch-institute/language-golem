@@ -1,8 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
-# Copyright 2025 The Milton Hirsch Institute, B.V.
-# SPDX-License-Identifier: Apache-2.0
+"""Monkey patching utilities for temporarily replacing object attributes."""
+
 import dataclasses
 import logging
 from typing import Any
@@ -12,15 +12,33 @@ PatchKey = tuple[int, str]
 
 @dataclasses.dataclass(frozen=True)
 class Patch:
+    """Stores the original value of a patched attribute.
+
+    Attributes:
+        original: The original attribute value before patching.
+    """
+
     original: Any
 
 
 class Patcher:
+    """Context manager for temporarily patching object attributes.
+
+    Tracks all patches and automatically restores original values when exiting
+    the context or when reset() is called.
+    """
+
     def __init__(self):
+        """Initialize a new Patcher instance."""
         self.__patched_obj: dict[PatchKey, Patch] = {}
         self.__target_objects: dict[int, Any] = {}
 
     def patched_objects(self) -> list[PatchKey]:
+        """Get a sorted list of all currently patched objects.
+
+        Returns:
+            List of (object_id, attribute_name) tuples for all patches.
+        """
         return sorted(self.__patched_obj.keys())
 
     def patch(self, target_obj: Any, name: str, replacement: Any):

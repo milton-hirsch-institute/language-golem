@@ -1,6 +1,8 @@
 # Copyright 2025 The Milton Hirsch Institute, B.V.
 # SPDX-License-Identifier: Apache-2.0
 
+"""Fake audio streaming classes for testing sounddevice applications."""
+
 import dataclasses
 import math
 import typing
@@ -22,6 +24,11 @@ DTYPE_TO_BYTE_SIZE = {
 
 
 class Time(typing.Protocol):
+    """Protocol for audio stream timing information.
+
+    Provides typing information for time parameter sent to callbacks.
+    """
+
     currentTime: float
     inputBufferAdcTime: float
     outputBufferDacTime: float
@@ -29,12 +36,24 @@ class Time(typing.Protocol):
 
 @dataclasses.dataclass
 class TimeStruct:
+    """Struct containing audio stream timing information.
+
+    Concrete implementation of Time protocol.
+
+    Attributes:
+        currentTime: Current time in seconds.
+        inputBufferAdcTime: Input buffer ADC time in seconds.
+        outputBufferDacTime: Output buffer DAC time in seconds.
+    """
+
     currentTime: float
     inputBufferAdcTime: float
     outputBufferDacTime: float
 
 
 class CffiBuffer(typing.Protocol):
+    """Protocol for CFFI buffer interface compatible with sounddevice."""
+
     def __len__(self) -> int: ...
 
     @typing.overload
@@ -57,6 +76,13 @@ class CffiBuffer(typing.Protocol):
 
 
 class FakeCffiBuffer:
+    """Fake CFFI buffer implementation for testing.
+
+    Args:
+        param: Buffer size (int) or initial data (bytes/bytearray).
+          If bytearray buffer instance takes ownership.
+    """
+
     def __init__(self, param: int | bytes | bytearray):
         if isinstance(param, bytearray):
             self.__buffer = param
@@ -95,26 +121,33 @@ type AudioCallback = Callable[[CffiBuffer, int, Time, sd.CallbackFlags], None]
 
 
 class FakeStream(sounddevice._StreamBase):  # pyright: ignore[reportPrivateUsage]
+    """Fake audio stream for testing sounddevice applications."""
+
     @property
     def active(self):
+        """Whether the stream is currently active."""
         if self.closed:
             return False
         return self.__active
 
     @property
     def stopped(self):
+        """Whether the stream is currently stopped."""
         return not self.active
 
     @property
     def closed(self):
+        """Whether the stream is closed."""
         return self._ptr is None
 
     @property
     def time(self):
+        """Get stream timing information."""
         return self.__time
 
     @property
     def cpu_load(self):
+        """Get CPU load estimate."""
         return self.__cpu_load
 
     def __init__(
@@ -164,27 +197,64 @@ class FakeStream(sounddevice._StreamBase):  # pyright: ignore[reportPrivateUsage
         self.__cpu_load = 0.1
 
     def start(self):
+        """Start the audio stream.
+
+        Raises:
+            sd.PortAudioError: If stream pointer is invalid.
+        """
         if self._ptr is not FAKE_PTR:
             raise sd.PortAudioError("Error starting stream pointer [PaErrorCode -9988]")
         self.__active = True
 
     def stop(self, ignore_errors: bool = True):
+        """Stop the audio stream.
+
+        Args:
+            ignore_errors: Whether to ignore errors during stop.
+                Not ignoring errors is unsupported.
+
+        Raises:
+            NotImplementedError: When ignore_errors is False.
+        """
         if not ignore_errors:
             raise NotImplementedError()
         self.__active = False
 
     def close(self, ignore_errors: bool = True):
+        """Close the audio stream.
+
+        Closed streams may not be started again.
+
+        Args:
+            ignore_errors: Whether to ignore errors during close.
+                Not ignoring errors is unsupported.
+
+        Raises:
+            NotImplementedError: When ignore_errors is False.
+        """
         if not ignore_errors:
             raise NotImplementedError()
         self._ptr = None
 
 
 class FakeRawInputStream(FakeStream, sd.RawInputStream):
+    """Fake raw input stream that generates test audio data."""
+
     @property
     def read_available(self):
+        """Get number of frames available to read.
+
+        Raises:
+            NotImplementedError: This property is not implemented.
+        """
         raise NotImplementedError()
 
     def start(self):
+        """Start the stream and generate test audio data.
+
+        Generates 2 seconds of sawtooth wave audio data and calls the callback
+        with blocks of audio data.
+        """
         super().start()
 
         if self._callback is not None:
