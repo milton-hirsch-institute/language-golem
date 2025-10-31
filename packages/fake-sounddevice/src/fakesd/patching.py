@@ -24,6 +24,13 @@ def setup(
 
     Yields:
         DeviceManager instance configured for the test session.
+
+    Example:
+        >>> import sounddevice as sd
+        >>> from fakesd import patching
+        >>> with patching.setup() as dm:
+        ...     devices = sd.query_devices()
+        ...     stream = sd.RawInputStream()
     """
     if device_manager is None:
         device_manager = devices.DeviceManager.new_basic()

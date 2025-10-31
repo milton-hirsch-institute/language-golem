@@ -26,6 +26,13 @@ class Patcher:
 
     Tracks all patches and automatically restores original values when exiting
     the context or when reset() is called.
+
+    Example:
+        >>> import math
+        >>> with Patcher() as patcher:
+        ...     patcher.patch(math, 'pi', 3.0)
+        ...     print(math.pi)  # 3.0
+        >>> print(math.pi)  # 3.141592653589793
     """
 
     def __init__(self):
