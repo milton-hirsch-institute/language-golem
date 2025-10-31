@@ -16,7 +16,8 @@ description: Print a commit message for current change
 
 # Your task
 
-Print a concise commit message for the current staged and unstaged changes using the commit message style from ../pipeline-agent/STYLE.md.
+Print a concise commit message for the current staged and unstaged changes using the commit message
+style specified in the project.
 
 Follow this process:
 1. Analyze the changes to categorize them (Changes, Features, Fixes, Tests, Refactoring)
